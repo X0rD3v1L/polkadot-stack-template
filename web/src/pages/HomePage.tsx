@@ -9,7 +9,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let unsub: (() => void) | undefined;
+    let subscription: { unsubscribe: () => void } | undefined;
 
     async function connect() {
       try {
@@ -18,9 +18,9 @@ export default function HomePage() {
         setChainName(chain.name);
         setConnected(true);
 
-        unsub = client.finalizedBlock$.subscribe((block) => {
+        subscription = client.finalizedBlock$.subscribe((block) => {
           setBlockNumber(block.number);
-        }).unsubscribe;
+        });
       } catch (e) {
         setError(
           "Could not connect to node at ws://127.0.0.1:9944. Is the chain running?"
@@ -30,7 +30,7 @@ export default function HomePage() {
     }
 
     connect();
-    return () => unsub?.();
+    return () => subscription?.unsubscribe();
   }, [setConnected, setBlockNumber]);
 
   return (
