@@ -5,10 +5,12 @@ pub mod pallet;
 use blake2::digest::{consts::U32, Digest};
 use blake2::Blake2b;
 use std::fs;
+use subxt::{OnlineClient, PolkadotConfig};
+use subxt_signer::sr25519::dev;
 
 type Blake2b256 = Blake2b<U32>;
 
-const BULLETIN_RPC: &str = "https://paseo-bulletin-rpc.polkadot.io";
+const BULLETIN_WS: &str = "wss://paseo-bulletin-rpc.polkadot.io";
 
 /// Resolve a hash from either a direct hex string or a file path.
 /// Returns (hex_hash, Option<file_bytes>).
@@ -32,8 +34,8 @@ pub fn hash_input(
     }
 }
 
-/// Upload file bytes to the Bulletin Chain via a simple JSON-RPC approach.
-/// This is a simplified version — in production, use PAPI with proper signing.
+/// Upload file bytes to the Bulletin Chain via subxt dynamic API.
+/// Signs with Alice dev account. Requires authorization on the Bulletin Chain.
 pub async fn upload_to_bulletin(file_bytes: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
     let max_size = 8 * 1024 * 1024;
     if file_bytes.len() > max_size {
@@ -44,24 +46,36 @@ pub async fn upload_to_bulletin(file_bytes: &[u8]) -> Result<(), Box<dyn std::er
         .into());
     }
 
-    println!("Uploading to Bulletin Chain ({BULLETIN_RPC})...");
+    println!("Connecting to Bulletin Chain ({BULLETIN_WS})...");
+    let api = OnlineClient::<PolkadotConfig>::from_url(BULLETIN_WS).await?;
+
     println!(
-        "Note: This requires authorization on the Bulletin Chain."
+        "Uploading {} bytes to Bulletin Chain (TransactionStorage.store)...",
+        file_bytes.len()
     );
     println!(
-        "Manage authorization at: https://paritytech.github.io/polkadot-bulletin-chain/"
+        "Note: Requires authorization. Manage at: https://paritytech.github.io/polkadot-bulletin-chain/"
     );
 
-    // For now, print instructions — full Bulletin Chain upload requires
-    // a subxt client with TransactionStorage.store() which needs the
-    // Bulletin Chain metadata. This would be a separate subxt connection.
-    println!();
-    println!("Bulletin Chain upload from CLI is not yet fully implemented.");
-    println!("Use the web frontend with the 'Upload to IPFS' toggle instead,");
-    println!("or submit manually via Polkadot.js Apps:");
-    println!("  1. Connect to {BULLETIN_RPC}");
-    println!("  2. Developer > Extrinsics > transactionStorage > store(data)");
-    println!("  3. Submit with an authorized account");
+    let signer = dev::alice();
+    let tx = subxt::dynamic::tx(
+        "TransactionStorage",
+        "store",
+        vec![("data", subxt::dynamic::Value::from_bytes(file_bytes))],
+    );
+
+    let result = api
+        .tx()
+        .sign_and_submit_then_watch_default(&tx, &signer)
+        .await?
+        .wait_for_finalized_success()
+        .await?;
+
+    println!(
+        "Uploaded to Bulletin Chain! Finalized: {}",
+        result.extrinsic_hash()
+    );
+    println!("File will be available on IPFS via the Paseo gateway.");
 
     Ok(())
 }
