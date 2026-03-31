@@ -4,7 +4,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod apis;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod configs;
@@ -12,11 +11,12 @@ mod genesis_config_presets;
 mod weights;
 
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use smallvec::smallvec;
 
 use polkadot_sdk::{staging_parachain_info as parachain_info, *};
 
+use sp_api::impl_runtime_apis;
 use sp_runtime::{
 	generic, impl_opaque_keys,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -140,17 +140,8 @@ impl_opaque_keys! {
 	}
 }
 
-#[sp_version::runtime_version]
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: alloc::borrow::Cow::Borrowed("stack-template-runtime"),
-	impl_name: alloc::borrow::Cow::Borrowed("stack-template-runtime"),
-	authoring_version: 1,
-	spec_version: 2,
-	impl_version: 0,
-	apis: apis::RUNTIME_API_VERSIONS,
-	transaction_version: 2,
-	system_version: 1,
-};
+// VERSION is defined after the impl_runtime_apis_plus_revive_traits! macro at the
+// bottom of this file, because that macro generates RUNTIME_API_VERSIONS.
 
 mod block_times {
 	pub const MILLI_SECS_PER_BLOCK: u64 = 6000;
@@ -262,21 +253,181 @@ mod runtime {
 	pub type Revive = pallet_revive;
 }
 
-impl pallet_revive::evm::runtime::SetWeightLimit for RuntimeCall {
-	fn set_weight_limit(&mut self, new_weight_limit: Weight) -> Weight {
-		match self {
-			Self::Revive(
-				pallet_revive::Call::eth_call { weight_limit, .. } |
-				pallet_revive::Call::eth_instantiate_with_code { weight_limit, .. },
-			) => {
-				let old = *weight_limit;
-				*weight_limit = new_weight_limit;
-				old
-			},
-			_ => Default::default(),
+// Runtime APIs including pallet-revive's ReviveApi (26+ methods for Ethereum RPC compatibility).
+// This macro also implements SetWeightLimit for RuntimeCall.
+pallet_revive::impl_runtime_apis_plus_revive_traits!(
+	Runtime,
+	Revive,
+	Executive,
+	EthExtraImpl,
+
+	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
+		fn slot_duration() -> sp_consensus_aura::SlotDuration {
+			sp_consensus_aura::SlotDuration::from_millis(SLOT_DURATION)
+		}
+		fn authorities() -> Vec<AuraId> {
+			pallet_aura::Authorities::<Runtime>::get().into_inner()
 		}
 	}
-}
+
+	impl cumulus_primitives_aura::AuraUnincludedSegmentApi<Block> for Runtime {
+		fn can_build_upon(
+			included_hash: <Block as sp_runtime::traits::Block>::Hash,
+			slot: cumulus_primitives_aura::Slot,
+		) -> bool {
+			ConsensusHook::can_build_upon(included_hash, slot)
+		}
+	}
+
+	impl sp_api::Core<Block> for Runtime {
+		fn version() -> sp_version::RuntimeVersion { VERSION }
+		fn execute_block(block: <Block as sp_runtime::traits::Block>::LazyBlock) {
+			Executive::execute_block(block)
+		}
+		fn initialize_block(header: &<Block as sp_runtime::traits::Block>::Header) -> sp_runtime::ExtrinsicInclusionMode {
+			Executive::initialize_block(header)
+		}
+	}
+
+	impl sp_api::Metadata<Block> for Runtime {
+		fn metadata() -> sp_core::OpaqueMetadata { sp_core::OpaqueMetadata::new(Runtime::metadata().into()) }
+		fn metadata_at_version(version: u32) -> Option<sp_core::OpaqueMetadata> { Runtime::metadata_at_version(version) }
+		fn metadata_versions() -> Vec<u32> { Runtime::metadata_versions() }
+	}
+
+	impl frame_support::view_functions::runtime_api::RuntimeViewFunction<Block> for Runtime {
+		fn execute_view_function(id: frame_support::view_functions::ViewFunctionId, input: Vec<u8>) -> Result<Vec<u8>, frame_support::view_functions::ViewFunctionDispatchError> {
+			Runtime::execute_view_function(id, input)
+		}
+	}
+
+	impl sp_block_builder::BlockBuilder<Block> for Runtime {
+		fn apply_extrinsic(extrinsic: <Block as sp_runtime::traits::Block>::Extrinsic) -> sp_runtime::ApplyExtrinsicResult {
+			Executive::apply_extrinsic(extrinsic)
+		}
+		fn finalize_block() -> <Block as sp_runtime::traits::Block>::Header { Executive::finalize_block() }
+		fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as sp_runtime::traits::Block>::Extrinsic> {
+			data.create_extrinsics()
+		}
+		fn check_inherents(block: <Block as sp_runtime::traits::Block>::LazyBlock, data: sp_inherents::InherentData) -> sp_inherents::CheckInherentsResult {
+			data.check_extrinsics(&block)
+		}
+	}
+
+	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
+		fn validate_transaction(source: sp_runtime::transaction_validity::TransactionSource, tx: <Block as sp_runtime::traits::Block>::Extrinsic, block_hash: <Block as sp_runtime::traits::Block>::Hash) -> sp_runtime::transaction_validity::TransactionValidity {
+			Executive::validate_transaction(source, tx, block_hash)
+		}
+	}
+
+	impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
+		fn offchain_worker(header: &<Block as sp_runtime::traits::Block>::Header) { Executive::offchain_worker(header) }
+	}
+
+	impl sp_session::SessionKeys<Block> for Runtime {
+		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> { SessionKeys::generate(seed) }
+		fn decode_session_keys(encoded: Vec<u8>) -> Option<Vec<(Vec<u8>, sp_core::crypto::KeyTypeId)>> {
+			SessionKeys::decode_into_raw_public_keys(&encoded)
+		}
+	}
+
+	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+		fn account_nonce(account: AccountId) -> Nonce { System::account_nonce(account) }
+	}
+
+	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
+		fn query_info(uxt: <Block as sp_runtime::traits::Block>::Extrinsic, len: u32) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> { TransactionPayment::query_info(uxt, len) }
+		fn query_fee_details(uxt: <Block as sp_runtime::traits::Block>::Extrinsic, len: u32) -> pallet_transaction_payment::FeeDetails<Balance> { TransactionPayment::query_fee_details(uxt, len) }
+		fn query_weight_to_fee(weight: frame_support::weights::Weight) -> Balance { TransactionPayment::weight_to_fee(weight) }
+		fn query_length_to_fee(length: u32) -> Balance { TransactionPayment::length_to_fee(length) }
+	}
+
+	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentCallApi<Block, Balance, RuntimeCall> for Runtime {
+		fn query_call_info(call: RuntimeCall, len: u32) -> pallet_transaction_payment::RuntimeDispatchInfo<Balance> { TransactionPayment::query_call_info(call, len) }
+		fn query_call_fee_details(call: RuntimeCall, len: u32) -> pallet_transaction_payment::FeeDetails<Balance> { TransactionPayment::query_call_fee_details(call, len) }
+		fn query_weight_to_fee(weight: frame_support::weights::Weight) -> Balance { TransactionPayment::weight_to_fee(weight) }
+		fn query_length_to_fee(length: u32) -> Balance { TransactionPayment::length_to_fee(length) }
+	}
+
+	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+		fn collect_collation_info(header: &<Block as sp_runtime::traits::Block>::Header) -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info(header)
+		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	impl frame_try_runtime::TryRuntime<Block> for Runtime {
+		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (frame_support::weights::Weight, frame_support::weights::Weight) {
+			use configs::RuntimeBlockWeights;
+			let weight = Executive::try_runtime_upgrade(checks).unwrap();
+			(weight, RuntimeBlockWeights::get().max_block)
+		}
+		fn execute_block(block: Block, state_root_check: bool, signature_check: bool, select: frame_try_runtime::TryStateSelect) -> frame_support::weights::Weight {
+			Executive::try_execute_block(block, state_root_check, signature_check, select).unwrap()
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn benchmark_metadata(extra: bool) -> (Vec<frame_benchmarking::BenchmarkList>, Vec<frame_support::traits::StorageInfo>) {
+			use frame_benchmarking::BenchmarkList;
+			use frame_support::traits::StorageInfoTrait;
+			use frame_system_benchmarking::Pallet as SystemBench;
+			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
+			let mut list = Vec::<BenchmarkList>::new();
+			list_benchmarks!(list, extra);
+			let storage_info = AllPalletsWithSystem::storage_info();
+			(list, storage_info)
+		}
+		#[allow(non_local_definitions)]
+		fn dispatch_benchmark(config: frame_benchmarking::BenchmarkConfig) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, alloc::string::String> {
+			use frame_benchmarking::{BenchmarkError, BenchmarkBatch};
+			use frame_system_benchmarking::Pallet as SystemBench;
+			impl frame_system_benchmarking::Config for Runtime {
+				fn setup_set_code_requirements(code: &Vec<u8>) -> Result<(), BenchmarkError> {
+					ParachainSystem::initialize_for_set_code_benchmark(code.len() as u32);
+					Ok(())
+				}
+				fn verify_set_code() {
+					System::assert_last_event(cumulus_pallet_parachain_system::Event::<Runtime>::ValidationFunctionStored.into());
+				}
+			}
+			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
+			impl cumulus_pallet_session_benchmarking::Config for Runtime {}
+			use frame_support::traits::WhitelistedStorageKeys;
+			let whitelist = AllPalletsWithSystem::whitelisted_storage_keys();
+			let mut batches = Vec::<BenchmarkBatch>::new();
+			let params = (&config, &whitelist);
+			add_benchmarks!(params, batches);
+			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+			Ok(batches)
+		}
+	}
+
+	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
+		fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+			frame_support::genesis_builder_helper::build_state::<RuntimeGenesisConfig>(config)
+		}
+		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+			frame_support::genesis_builder_helper::get_preset::<RuntimeGenesisConfig>(id, genesis_config_presets::get_preset)
+		}
+		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+			genesis_config_presets::preset_names()
+		}
+	}
+);
+
+#[sp_version::runtime_version]
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+	spec_name: alloc::borrow::Cow::Borrowed("stack-template-runtime"),
+	impl_name: alloc::borrow::Cow::Borrowed("stack-template-runtime"),
+	authoring_version: 1,
+	spec_version: 2,
+	impl_version: 0,
+	apis: RUNTIME_API_VERSIONS,
+	transaction_version: 2,
+	system_version: 1,
+};
 
 cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,
