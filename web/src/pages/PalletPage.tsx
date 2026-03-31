@@ -12,6 +12,16 @@ interface Claim {
   block: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function formatDispatchError(err: any): string {
+  if (!err) return "Transaction failed";
+  if (err.type === "Module" && err.value) {
+    const mod = err.value;
+    return `${mod.type}.${mod.value?.type ?? ""}: ${mod.value?.value ?? ""}`.replace(/:?\s*$/, "");
+  }
+  return JSON.stringify(err);
+}
+
 export default function PalletPage() {
   const { selectedAccount, setSelectedAccount, setTxStatus, txStatus, wsUrl } =
     useChainStore();
@@ -63,7 +73,7 @@ export default function PalletPage() {
       });
       const result = await tx.signAndSubmit(account.signer);
       if (!result.ok) {
-        setTxStatus(`Error: ${result.dispatchError?.type ?? "Transaction failed"}`);
+        setTxStatus(`Error: ${formatDispatchError(result.dispatchError)}`);
         return;
       }
       setTxStatus("Claim created successfully!");
@@ -84,7 +94,7 @@ export default function PalletPage() {
       });
       const result = await tx.signAndSubmit(account.signer);
       if (!result.ok) {
-        setTxStatus(`Error: ${result.dispatchError?.type ?? "Transaction failed"}`);
+        setTxStatus(`Error: ${formatDispatchError(result.dispatchError)}`);
         return;
       }
       setTxStatus("Claim revoked successfully!");
