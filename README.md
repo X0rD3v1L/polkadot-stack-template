@@ -50,9 +50,10 @@ A React + Vite + TypeScript + Tailwind CSS frontend.
 A Rust CLI tool using [subxt](https://github.com/parity-tech/subxt) and [alloy](https://alloy.rs) for chain interaction.
 
 - **Source**: [`cli/`](cli/)
-- **Pallet commands**: `pallet create-claim`, `revoke-claim`, `get-claim`, `list-claims`
-- **Contract commands**: `contract create-claim`, `revoke-claim`, `get-claim`, `info`
+- **Pallet commands**: `pallet create-claim [hash | --file path] [--upload]`, `revoke-claim`, `get-claim`, `list-claims`
+- **Contract commands**: `contract create-claim <evm|pvm> [hash | --file path] [--upload]`, `revoke-claim`, `get-claim`, `info`
 - **Chain commands**: `chain info`, `chain blocks`
+- **Bulletin Chain**: `--upload` flag uploads files to IPFS via `TransactionStorage.store()`
 
 ### Deployment
 
@@ -90,7 +91,7 @@ cd web && npm install && npm run dev
 
 # Or use the CLI
 cargo run -p stack-cli -- chain info
-cargo run -p stack-cli -- pallet create-claim 0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+cargo run -p stack-cli -- pallet create-claim --file ./README.md
 cargo run -p stack-cli -- pallet list-claims
 ```
 

@@ -148,18 +148,29 @@ zombienet spawn blockchain/zombienet.toml
 
 ## Bulletin Chain (IPFS Upload)
 
-The frontend supports optional file upload to the Polkadot Bulletin Chain, which makes files available via IPFS.
+Both the frontend and CLI support optional file upload to the Polkadot Bulletin Chain, which makes files available via IPFS.
 
 **Prerequisites:**
 - Account must be authorized on the Bulletin Chain: [paritytech.github.io/polkadot-bulletin-chain](https://paritytech.github.io/polkadot-bulletin-chain/)
 - Bulletin Chain RPC: `wss://paseo-bulletin-rpc.polkadot.io`
 
-**How it works:**
+**Frontend:**
 1. Toggle "Upload to IPFS (via Bulletin Chain)" in the file drop zone
-2. The frontend checks account authorization
+2. The frontend checks account authorization via PAPI
 3. File bytes are uploaded via `TransactionStorage.store()`
 4. Then the hash is claimed on the parachain/contract
 5. The IPFS link appears in the claims list (verified via gateway HEAD request)
+
+**CLI:**
+```bash
+# Hash a file and upload to Bulletin Chain, then claim on pallet
+cargo run -p stack-cli -- pallet create-claim --file ./document.pdf --upload
+
+# Same for contracts
+cargo run -p stack-cli -- contract create-claim evm --file ./document.pdf --upload
+```
+
+The CLI connects to the Bulletin Chain via subxt and submits `TransactionStorage.store()` signed by Alice.
 
 **Notes:**
 - Files expire after ~7 days unless renewed
@@ -175,14 +186,18 @@ The CLI reads contract addresses from `deployments.json` in the project root. Af
 cargo run -p stack-cli -- chain info
 
 # Pallet interaction (via Substrate RPC)
-cargo run -p stack-cli -- pallet create-claim 0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+cargo run -p stack-cli -- pallet create-claim 0x0123...def      # direct hash
+cargo run -p stack-cli -- pallet create-claim --file ./doc.pdf  # hash a file
+cargo run -p stack-cli -- pallet create-claim --file ./doc.pdf --upload  # hash + IPFS upload
 cargo run -p stack-cli -- pallet get-claim 0x0123...
 cargo run -p stack-cli -- pallet list-claims
 cargo run -p stack-cli -- pallet revoke-claim 0x0123...
 
 # Contract interaction (via eth-rpc)
 cargo run -p stack-cli -- contract info
-cargo run -p stack-cli -- contract create-claim evm 0x0123...
+cargo run -p stack-cli -- contract create-claim evm 0x0123...           # direct hash
+cargo run -p stack-cli -- contract create-claim evm --file ./doc.pdf   # hash a file
+cargo run -p stack-cli -- contract create-claim pvm --file ./doc.pdf --upload --signer bob
 cargo run -p stack-cli -- contract get-claim evm 0x0123...
 cargo run -p stack-cli -- contract revoke-claim pvm 0x0123... --signer bob
 ```
