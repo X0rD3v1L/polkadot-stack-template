@@ -55,11 +55,11 @@ echo "  Ethereum RPC ready (http://127.0.0.1:8545)"
 
 # Deploy contracts
 echo "[5/5] Deploying contracts..."
-echo "  Deploying Counter via EVM (solc)..."
+echo "  Deploying ProofOfExistence via EVM (solc)..."
 cd "$ROOT_DIR/contracts/evm"
 npx hardhat run scripts/deploy.ts --network local 2>&1 || echo "  (EVM deploy failed)"
 
-echo "  Deploying Counter via PVM (resolc)..."
+echo "  Deploying ProofOfExistence via PVM (resolc)..."
 cd "$ROOT_DIR/contracts/pvm"
 npx hardhat run scripts/deploy.ts --network localNode 2>&1 || echo "  (PVM deploy failed)"
 

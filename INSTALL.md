@@ -174,7 +174,7 @@ The Ethereum RPC endpoint is compatible with MetaMask, Hardhat, ethers.js, and a
 ./scripts/start-dev-with-contracts.sh
 ```
 
-Same as above, plus compiles and deploys the Counter contract to both EVM (solc) and PVM (resolc) backends. You'll see both deployed contract addresses in the output.
+Same as above, plus compiles and deploys the ProofOfExistence contract to both EVM (solc) and PVM (resolc) backends. You'll see both deployed contract addresses in the output.
 
 ### Frontend
 
@@ -218,11 +218,11 @@ cd contracts/pvm && npx hardhat vars set PRIVATE_KEY
 ```bash
 # EVM
 cd contracts/evm
-npx hardhat ignition deploy ./ignition/modules/Counter.js --network polkadotTestnet
+npx hardhat ignition deploy ./ignition/modules/ProofOfExistence.js --network polkadotTestnet
 
 # PVM
 cd contracts/pvm
-npx hardhat ignition deploy ./ignition/modules/Counter.js --network polkadotTestnet
+npx hardhat ignition deploy ./ignition/modules/ProofOfExistence.js --network polkadotTestnet
 ```
 
 ### Verify on Blockscout

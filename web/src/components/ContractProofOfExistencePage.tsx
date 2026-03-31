@@ -88,6 +88,17 @@ export default function ContractProofOfExistencePage({
       setTxStatus(null);
       const client = getPublicClient();
       const addr = contractAddress as Address;
+
+      // Check if contract is actually deployed at this address
+      const code = await client.getCode({ address: addr });
+      if (!code || code === "0x") {
+        setClaims([]);
+        setTxStatus(
+          "Error: No contract deployed at this address. Deploy with: cd contracts/evm && npm run deploy:local"
+        );
+        return;
+      }
+
       const count = await client.readContract({
         address: addr,
         abi: proofOfExistenceAbi,
@@ -133,6 +144,14 @@ export default function ContractProofOfExistencePage({
       return;
     }
     try {
+      const client = getPublicClient();
+      const code = await client.getCode({ address: contractAddress as Address });
+      if (!code || code === "0x") {
+        setTxStatus(
+          "Error: No contract deployed at this address. Deploy with: cd contracts/evm && npm run deploy:local"
+        );
+        return;
+      }
       // Optional: upload to Bulletin Chain first (using Substrate signer)
       if (uploadToIpfs && fileBytes) {
         const substrateSigner = devAccounts[selectedAccount].signer;
@@ -179,6 +198,14 @@ export default function ContractProofOfExistencePage({
   async function revokeClaim(documentHash: `0x${string}`) {
     if (!contractAddress) return;
     try {
+      const client = getPublicClient();
+      const code = await client.getCode({ address: contractAddress as Address });
+      if (!code || code === "0x") {
+        setTxStatus(
+          "Error: No contract deployed at this address. Deploy with: cd contracts/evm && npm run deploy:local"
+        );
+        return;
+      }
       setTxStatus("Submitting revokeClaim...");
       const walletClient = await getWalletClient(selectedAccount);
       const hash = await walletClient.writeContract({
@@ -210,13 +237,23 @@ export default function ContractProofOfExistencePage({
           <label className="text-sm text-gray-400 block mb-1">
             Contract Address
           </label>
-          <input
-            type="text"
-            value={contractAddress}
-            onChange={(e) => saveAddress(e.target.value)}
-            placeholder="0x..."
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white w-full font-mono text-sm"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={contractAddress}
+              onChange={(e) => saveAddress(e.target.value)}
+              placeholder="0x..."
+              className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white w-full font-mono text-sm"
+            />
+            {defaultAddress && contractAddress !== defaultAddress && (
+              <button
+                onClick={() => saveAddress(defaultAddress)}
+                className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 text-xs whitespace-nowrap"
+              >
+                Reset
+              </button>
+            )}
+          </div>
         </div>
 
         <div>
