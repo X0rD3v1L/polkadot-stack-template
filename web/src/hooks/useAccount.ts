@@ -3,6 +3,7 @@ import {
   DEV_PHRASE,
   entropyToMiniSecret,
   mnemonicToEntropy,
+  ss58Address,
 } from "@polkadot-labs/hdkd-helpers";
 import { getPolkadotSigner } from "polkadot-api/signer";
 import { type PolkadotSigner } from "polkadot-api";
@@ -14,6 +15,7 @@ const derive = sr25519CreateDerive(miniSecret);
 
 export type DevAccount = {
   name: string;
+  address: string;
   signer: PolkadotSigner;
 };
 
@@ -21,6 +23,7 @@ function createDevAccount(name: string, path: string): DevAccount {
   const keypair = derive(path);
   return {
     name,
+    address: ss58Address(keypair.publicKey),
     signer: getPolkadotSigner(keypair.publicKey, "Sr25519", keypair.sign),
   };
 }

@@ -14,15 +14,13 @@ export default function PalletPage() {
 
   function getApi() {
     const client = getClient();
-    return client.getUnsafeApi(stack_template);
+    return client.getTypedApi(stack_template);
   }
 
   async function queryCounter() {
     try {
       const api = getApi();
-      const value = await api.query.TemplatePallet.Counters.getValue(
-        account.signer.publicKey
-      );
+      const value = await api.query.TemplatePallet.Counters.getValue(account.address);
       setCounterValue(value);
       setTxStatus(null);
     } catch (e) {
