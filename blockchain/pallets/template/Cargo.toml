@@ -15,7 +15,8 @@ frame = { workspace = true, features = ["experimental", "runtime"], default-feat
 scale-info = { features = ["derive"], workspace = true }
 
 [dev-dependencies]
-polkadot-sdk = { workspace = true, features = ["std", "runtime"] }
+frame = { workspace = true, features = ["std", "experimental", "runtime"] }
+sp-io = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]

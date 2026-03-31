@@ -1,7 +1,5 @@
 use alloc::vec::Vec;
 
-use polkadot_sdk::*;
-
 use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	weights::Weight,
@@ -61,7 +59,7 @@ impl_runtime_apis! {
 			VERSION
 		}
 
-		fn execute_block(block: Block) {
+		fn execute_block(block: <Block as BlockT>::LazyBlock) {
 			Executive::execute_block(block)
 		}
 
@@ -104,7 +102,7 @@ impl_runtime_apis! {
 		}
 
 		fn check_inherents(
-			block: Block,
+			block: <Block as BlockT>::LazyBlock,
 			data: sp_inherents::InherentData,
 		) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
@@ -218,10 +216,10 @@ impl_runtime_apis! {
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn benchmark_metadata(extra: bool) -> (
 			Vec<frame_benchmarking::BenchmarkList>,
-			Vec<polkadot_sdk::frame_support::traits::StorageInfo>,
+			Vec<frame_support::traits::StorageInfo>,
 		) {
 			use frame_benchmarking::BenchmarkList;
-			use polkadot_sdk::frame_support::traits::StorageInfoTrait;
+			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 			use super::*;
@@ -255,7 +253,7 @@ impl_runtime_apis! {
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 			impl cumulus_pallet_session_benchmarking::Config for Runtime {}
 
-			use polkadot_sdk::frame_support::traits::WhitelistedStorageKeys;
+			use frame_support::traits::WhitelistedStorageKeys;
 			let whitelist = AllPalletsWithSystem::whitelisted_storage_keys();
 
 			let mut batches = Vec::<BenchmarkBatch>::new();
@@ -280,4 +278,5 @@ impl_runtime_apis! {
 			crate::genesis_config_presets::preset_names()
 		}
 	}
+
 }

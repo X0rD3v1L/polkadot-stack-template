@@ -16,8 +16,6 @@
 // limitations under the License.
 
 pub mod constants {
-	use polkadot_sdk::*;
-
 	use frame_support::{
 		parameter_types,
 		weights::{constants, Weight},
@@ -31,8 +29,6 @@ pub mod constants {
 
 	#[cfg(test)]
 	mod test_weights {
-		use polkadot_sdk::*;
-
 		use frame_support::weights::constants;
 
 		/// Checks that the weight exists and is sane.

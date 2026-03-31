@@ -13,9 +13,6 @@ mod weights;
 
 extern crate alloc;
 use alloc::vec::Vec;
-use smallvec::smallvec;
-
-use polkadot_sdk::{staging_parachain_info as parachain_info, *};
 
 use sp_runtime::{
 	generic, impl_opaque_keys,
@@ -28,14 +25,12 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use frame_support::weights::{
-	constants::WEIGHT_REF_TIME_PER_SECOND, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
-	WeightToFeePolynomial,
+	constants::WEIGHT_REF_TIME_PER_SECOND, Weight,
 };
-pub use genesis_config_presets::PARACHAIN_ID;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 
-use weights::ExtrinsicBaseWeight;
+pub use genesis_config_presets::PARACHAIN_ID;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -71,6 +66,7 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 pub type BlockId = generic::BlockId<Block>;
 
 /// The extension to the basic transaction logic.
+/// Includes pallet_revive's SetOrigin for Ethereum transaction support.
 pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 	Runtime,
 	(
@@ -83,16 +79,38 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
 		frame_system::CheckWeight<Runtime>,
 		pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 		frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
+		pallet_revive::evm::tx_extension::SetOrigin<Runtime>,
 	),
 >;
 
-/// Unchecked extrinsic type as expected by this runtime.
-pub type UncheckedExtrinsic =
-	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, TxExtension>;
+/// Default extensions applied to Ethereum transactions.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct EthExtraImpl;
 
-/// All migrations of the runtime, aside from the ones declared in the pallets.
-#[allow(unused_parens)]
-type Migrations = ();
+impl pallet_revive::evm::runtime::EthExtra for EthExtraImpl {
+	type Config = Runtime;
+	type Extension = TxExtension;
+
+	fn get_eth_extension(nonce: u32, tip: Balance) -> Self::Extension {
+		(
+			frame_system::CheckNonZeroSender::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckMortality::from(generic::Era::Immortal),
+			frame_system::CheckNonce::<Runtime>::from(nonce),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+			frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+			pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::new_from_eth_transaction(),
+		)
+			.into()
+	}
+}
+
+/// Unchecked extrinsic type supporting both Substrate and Ethereum transactions.
+pub type UncheckedExtrinsic =
+	pallet_revive::evm::runtime::UncheckedExtrinsic<Address, Signature, EthExtraImpl>;
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -101,39 +119,19 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	Migrations,
 >;
 
-/// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
-/// node's balance type.
-pub struct WeightToFee;
-impl WeightToFeePolynomial for WeightToFee {
-	type Balance = Balance;
-	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-		let p = MILLI_UNIT / 10;
-		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
-		smallvec![WeightToFeeCoefficient {
-			degree: 1,
-			negative: false,
-			coeff_frac: Perbill::from_rational(p % q, q),
-			coeff_integer: p / q,
-		}]
-	}
-}
+// WeightToFee is defined in configs/mod.rs using pallet_revive::evm::fees::BlockRatioFee
 
 /// Opaque types for CLI compatibility.
 pub mod opaque {
 	use super::*;
-	pub use polkadot_sdk::sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
-	use polkadot_sdk::sp_runtime::{
-		generic,
-		traits::{BlakeTwo256, Hash as HashT},
-	};
+	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
 	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 	pub type BlockId = generic::BlockId<Block>;
-	pub type Hash = <BlakeTwo256 as HashT>::Output;
+	pub type Hash = <BlakeTwo256 as sp_runtime::traits::Hash>::Output;
 }
 
 impl_opaque_keys! {
@@ -147,10 +145,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: alloc::borrow::Cow::Borrowed("stack-template-runtime"),
 	impl_name: alloc::borrow::Cow::Borrowed("stack-template-runtime"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 2,
 	impl_version: 0,
 	apis: apis::RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	transaction_version: 2,
 	system_version: 1,
 };
 
@@ -168,13 +166,11 @@ pub const UNIT: Balance = 1_000_000_000_000;
 pub const MILLI_UNIT: Balance = 1_000_000_000;
 pub const MICRO_UNIT: Balance = 1_000_000;
 
-/// The existential deposit. Set to 1/10 of the Connected Relay Chain.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
-/// We allow for 2 seconds of compute with a 6 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 	WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
 	cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
@@ -187,7 +183,6 @@ mod async_backing_params {
 }
 pub(crate) use async_backing_params::*;
 
-/// Aura consensus hook
 type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
 	Runtime,
 	RELAY_CHAIN_SLOT_DURATION_MILLIS,
@@ -195,7 +190,6 @@ type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
 	UNINCLUDED_SEGMENT_CAPACITY,
 >;
 
-/// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
 	NativeVersion {
@@ -204,7 +198,6 @@ pub fn native_version() -> NativeVersion {
 	}
 }
 
-// Create the runtime by composing the FRAME pallets that were previously configured.
 #[frame_support::runtime]
 mod runtime {
 	#[runtime::runtime]
@@ -229,21 +222,18 @@ mod runtime {
 	#[runtime::pallet_index(2)]
 	pub type Timestamp = pallet_timestamp;
 	#[runtime::pallet_index(3)]
-	pub type ParachainInfo = parachain_info;
+	pub type ParachainInfo = staging_parachain_info;
 	#[runtime::pallet_index(4)]
 	pub type WeightReclaim = cumulus_pallet_weight_reclaim;
 
-	// Monetary stuff.
 	#[runtime::pallet_index(10)]
 	pub type Balances = pallet_balances;
 	#[runtime::pallet_index(11)]
 	pub type TransactionPayment = pallet_transaction_payment;
 
-	// Governance
 	#[runtime::pallet_index(15)]
 	pub type Sudo = pallet_sudo;
 
-	// Collator support. The order of these 4 are important and shall not change.
 	#[runtime::pallet_index(20)]
 	pub type Authorship = pallet_authorship;
 	#[runtime::pallet_index(21)]
@@ -255,7 +245,6 @@ mod runtime {
 	#[runtime::pallet_index(24)]
 	pub type AuraExt = cumulus_pallet_aura_ext;
 
-	// XCM helpers.
 	#[runtime::pallet_index(30)]
 	pub type XcmpQueue = cumulus_pallet_xcmp_queue;
 	#[runtime::pallet_index(31)]
@@ -265,9 +254,28 @@ mod runtime {
 	#[runtime::pallet_index(33)]
 	pub type MessageQueue = pallet_message_queue;
 
-	// Template pallet
 	#[runtime::pallet_index(50)]
 	pub type TemplatePallet = pallet_template;
+
+	// Smart contracts (EVM + PVM via pallet-revive)
+	#[runtime::pallet_index(90)]
+	pub type Revive = pallet_revive;
+}
+
+impl pallet_revive::evm::runtime::SetWeightLimit for RuntimeCall {
+	fn set_weight_limit(&mut self, new_weight_limit: Weight) -> Weight {
+		match self {
+			Self::Revive(
+				pallet_revive::Call::eth_call { weight_limit, .. } |
+				pallet_revive::Call::eth_instantiate_with_code { weight_limit, .. },
+			) => {
+				let old = *weight_limit;
+				*weight_limit = new_weight_limit;
+				old
+			},
+			_ => Default::default(),
+		}
+	}
 }
 
 cumulus_pallet_parachain_system::register_validate_block! {
