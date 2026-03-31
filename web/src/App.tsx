@@ -7,9 +7,9 @@ export default function App() {
 
   const navItems = [
     { path: "/", label: "Home", enabled: true },
-    { path: "/pallet", label: "Pallet Counter", enabled: pallets.templatePallet !== false },
-    { path: "/evm", label: "EVM Contract", enabled: pallets.revive !== false },
-    { path: "/pvm", label: "PVM Contract", enabled: pallets.revive !== false },
+    { path: "/pallet", label: "Pallet Counter", enabled: pallets.templatePallet === true },
+    { path: "/evm", label: "EVM Contract", enabled: pallets.revive === true },
+    { path: "/pvm", label: "PVM Contract", enabled: pallets.revive === true },
   ];
 
   return (

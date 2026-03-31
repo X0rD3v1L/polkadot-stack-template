@@ -208,14 +208,18 @@ function Card({
   available: boolean | null;
   unavailableReason: string;
 }) {
-  const disabled = available === false;
-
-  if (disabled) {
+  if (available !== true) {
     return (
       <div className="bg-gray-900 rounded-lg p-5 border border-gray-800 opacity-50">
-        <h3 className={`text-lg font-semibold mb-2 text-gray-500`}>{title}</h3>
+        <h3 className="text-lg font-semibold mb-2 text-gray-500">{title}</h3>
         <p className="text-sm text-gray-500">{description}</p>
-        <p className="text-xs text-red-400 mt-2">{unavailableReason}</p>
+        <p className="text-xs mt-2">
+          {available === null ? (
+            <span className="text-yellow-400">Detecting...</span>
+          ) : (
+            <span className="text-red-400">{unavailableReason}</span>
+          )}
+        </p>
       </div>
     );
   }
@@ -227,9 +231,6 @@ function Card({
     >
       <h3 className={`text-lg font-semibold mb-2 ${color}`}>{title}</h3>
       <p className="text-sm text-gray-400">{description}</p>
-      {available === null && (
-        <p className="text-xs text-yellow-400 mt-2">Detecting...</p>
-      )}
     </a>
   );
 }
