@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useChainStore } from "../store/chainStore";
 import { devAccounts } from "../hooks/useAccount";
 import { getClient } from "../hooks/useChain";
+import { stack_template } from "@polkadot-api/descriptors";
 
 export default function PalletPage() {
   const { selectedAccount, setSelectedAccount, setTxStatus, txStatus } =
@@ -11,20 +12,19 @@ export default function PalletPage() {
 
   const account = devAccounts[selectedAccount];
 
+  function getApi() {
+    const client = getClient();
+    return client.getUnsafeApi(stack_template);
+  }
+
   async function queryCounter() {
     try {
-      const client = getClient();
-      const typedApi = client.getTypedApi(
-        (await import("@polkadot-api/descriptors")).stack_template
-      );
-      // Query counter for the selected account's public key
-      const signer = account.signer;
-      // We need the account's public key to query storage
-      // For now, we'll query using the signer's publicKey
-      const value = await typedApi.query.TemplatePallet.Counters.getValue(
-        signer.publicKey
+      const api = getApi();
+      const value = await api.query.TemplatePallet.Counters.getValue(
+        account.signer.publicKey
       );
       setCounterValue(value);
+      setTxStatus(null);
     } catch (e) {
       console.error("Failed to query counter:", e);
       setTxStatus(`Error: ${e}`);
@@ -34,11 +34,8 @@ export default function PalletPage() {
   async function setCounter() {
     try {
       setTxStatus("Submitting set_counter...");
-      const client = getClient();
-      const typedApi = client.getTypedApi(
-        (await import("@polkadot-api/descriptors")).stack_template
-      );
-      const tx = typedApi.tx.TemplatePallet.set_counter({
+      const api = getApi();
+      const tx = api.tx.TemplatePallet.set_counter({
         value: parseInt(inputValue) || 0,
       });
       await tx.signAndSubmit(account.signer);
@@ -53,11 +50,8 @@ export default function PalletPage() {
   async function increment() {
     try {
       setTxStatus("Submitting increment...");
-      const client = getClient();
-      const typedApi = client.getTypedApi(
-        (await import("@polkadot-api/descriptors")).stack_template
-      );
-      const tx = typedApi.tx.TemplatePallet.increment();
+      const api = getApi();
+      const tx = api.tx.TemplatePallet.increment();
       await tx.signAndSubmit(account.signer);
       setTxStatus("increment submitted successfully!");
       queryCounter();
