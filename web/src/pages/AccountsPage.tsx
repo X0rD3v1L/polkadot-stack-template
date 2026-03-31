@@ -9,13 +9,34 @@ import {
   connectInjectedExtension,
   type InjectedPolkadotAccount,
 } from "polkadot-api/pjs-signer";
+import {
+  injectSpektrExtension,
+  SpektrExtensionName,
+} from "@novasamatech/product-sdk";
+
+type HostEnvironment = "desktop-webview" | "web-iframe" | "standalone";
+
+function detectHostEnvironment(): HostEnvironment {
+  if (typeof window === "undefined") return "standalone";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((window as any).__HOST_WEBVIEW_MARK__) return "desktop-webview";
+  try {
+    if (window !== window.top) return "web-iframe";
+  } catch {
+    return "web-iframe";
+  }
+  return "standalone";
+}
+
+function isInHost(): boolean {
+  return detectHostEnvironment() !== "standalone";
+}
 
 interface DisplayAccount {
   name: string;
   ss58: string;
   eth: string;
-  type: "dev" | "extension";
-  signer?: unknown;
+  type: "dev" | "extension" | "spektr";
 }
 
 function formatDispatchError(err: unknown): string {
@@ -53,6 +74,12 @@ export default function AccountsPage() {
     InjectedPolkadotAccount[]
   >([]);
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
+  const [spektrAccounts, setSpektrAccounts] = useState<
+    InjectedPolkadotAccount[]
+  >([]);
+  const [spektrStatus, setSpektrStatus] = useState<
+    "detecting" | "injecting" | "connected" | "unavailable" | "failed"
+  >("detecting");
   const [fundStatus, setFundStatus] = useState<string | null>(null);
   const [fundAmount, setFundAmount] = useState("10000");
 
@@ -64,10 +91,51 @@ export default function AccountsPage() {
     type: "dev",
   }));
 
-  // Detect available wallets on mount
+  // Detect host environment and inject Spektr on mount
+  useEffect(() => {
+    async function initSpektr() {
+      if (!isInHost()) {
+        setSpektrStatus("unavailable");
+        return;
+      }
+
+      setSpektrStatus("injecting");
+      try {
+        let injected = false;
+        for (let i = 0; i < 10; i++) {
+          if (await injectSpektrExtension()) {
+            injected = true;
+            break;
+          }
+          if (i < 9) await new Promise((r) => setTimeout(r, 500));
+        }
+
+        if (!injected) {
+          setSpektrStatus("failed");
+          return;
+        }
+
+        const ext = await connectInjectedExtension(SpektrExtensionName);
+        const accounts = ext.getAccounts();
+        setSpektrAccounts(accounts);
+        setSpektrStatus("connected");
+
+        ext.subscribe((updated) => setSpektrAccounts(updated));
+      } catch (e) {
+        console.error("[Spektr] Init failed:", e);
+        setSpektrStatus("failed");
+      }
+    }
+
+    initSpektr();
+  }, []);
+
+  // Detect available browser extension wallets on mount
   useEffect(() => {
     try {
-      const wallets = getInjectedExtensions();
+      const wallets = getInjectedExtensions().filter(
+        (name) => name !== SpektrExtensionName
+      );
       setAvailableWallets(wallets);
     } catch {
       // No injected extensions available
@@ -83,7 +151,9 @@ export default function AccountsPage() {
       ext.subscribe((updated) => setExtensionAccounts(updated));
     } catch (e) {
       console.error("Failed to connect wallet:", e);
-      setFundStatus(`Error connecting wallet: ${e instanceof Error ? e.message : e}`);
+      setFundStatus(
+        `Error connecting wallet: ${e instanceof Error ? e.message : e}`
+      );
     }
   }
 
@@ -98,7 +168,7 @@ export default function AccountsPage() {
       return;
     }
     try {
-      const amount = BigInt(fundAmount) * 1_000_000_000_000n; // Convert to planck (12 decimals)
+      const amount = BigInt(fundAmount) * 1_000_000_000_000n;
       setFundStatus(`Funding ${accountName}...`);
       const client = getClient(wsUrl);
       const api = client.getTypedApi(stack_template);
@@ -128,12 +198,24 @@ export default function AccountsPage() {
     talisman: "Talisman",
   };
 
+  const typeBadge: Record<string, { bg: string; text: string; label: string }> =
+    {
+      dev: { bg: "bg-blue-900", text: "text-blue-300", label: "Dev" },
+      extension: {
+        bg: "bg-purple-900",
+        text: "text-purple-300",
+        label: "Extension",
+      },
+      spektr: { bg: "bg-pink-900", text: "text-pink-300", label: "Spektr" },
+    };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-pink-400">Accounts</h1>
       <p className="text-gray-400">
-        Manage dev accounts and connect browser extension wallets. Fund accounts
-        using Sudo on the dev chain.
+        Manage dev accounts, connect browser extension wallets, or use Spektr
+        accounts from the Polkadot host. Fund accounts using Sudo on the dev
+        chain.
       </p>
 
       {/* Fund amount */}
@@ -168,11 +250,74 @@ export default function AccountsPage() {
             <AccountCard
               key={acc.ss58}
               account={acc}
+              badge={typeBadge[acc.type]}
               onFund={() => fundAccount(acc.ss58, acc.name)}
               connected={connected}
             />
           ))}
         </div>
+      </div>
+
+      {/* Spektr Accounts (Polkadot Host) */}
+      <div className="bg-gray-900 rounded-lg p-5 border border-gray-800 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-300">
+          Spektr (Polkadot Host)
+        </h2>
+        {spektrStatus === "detecting" && (
+          <p className="text-sm text-yellow-400">
+            Detecting Polkadot host environment...
+          </p>
+        )}
+        {spektrStatus === "injecting" && (
+          <p className="text-sm text-yellow-400">
+            Injecting Spektr extension...
+          </p>
+        )}
+        {spektrStatus === "unavailable" && (
+          <p className="text-sm text-gray-500">
+            Not running inside a Polkadot host (Desktop or Web). Spektr accounts
+            are only available when loaded through the{" "}
+            <a
+              href="https://polkadot.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-pink-400 underline"
+            >
+              Polkadot app
+            </a>
+            .
+          </p>
+        )}
+        {spektrStatus === "failed" && (
+          <p className="text-sm text-red-400">
+            Failed to connect to Spektr. The host may not have injected the
+            extension.
+          </p>
+        )}
+        {spektrStatus === "connected" && (
+          <div className="space-y-3">
+            <p className="text-sm text-green-400">
+              Connected to Spektr ({spektrAccounts.length} account
+              {spektrAccounts.length !== 1 ? "s" : ""})
+            </p>
+            {spektrAccounts.map((acc) => (
+              <AccountCard
+                key={acc.address}
+                account={{
+                  name: acc.name || "Spektr Account",
+                  ss58: acc.address,
+                  eth: "N/A",
+                  type: "spektr",
+                }}
+                badge={typeBadge.spektr}
+                onFund={() =>
+                  fundAccount(acc.address, acc.name || "Spektr account")
+                }
+                connected={connected}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Extension Wallets */}
@@ -207,6 +352,7 @@ export default function AccountsPage() {
                     eth: "N/A",
                     type: "extension",
                   }}
+                  badge={typeBadge.extension}
                   onFund={() =>
                     fundAccount(acc.address, acc.name || "Extension account")
                   }
@@ -266,10 +412,12 @@ export default function AccountsPage() {
 
 function AccountCard({
   account,
+  badge,
   onFund,
   connected,
 }: {
   account: DisplayAccount;
+  badge: { bg: string; text: string; label: string };
   onFund: () => void;
   connected: boolean;
 }) {
@@ -286,14 +434,8 @@ function AccountCard({
               Fund
             </button>
           )}
-          <span
-            className={`px-2 py-0.5 rounded text-xs ${
-              account.type === "dev"
-                ? "bg-blue-900 text-blue-300"
-                : "bg-purple-900 text-purple-300"
-            }`}
-          >
-            {account.type === "dev" ? "Dev" : "Extension"}
+          <span className={`px-2 py-0.5 rounded text-xs ${badge.bg} ${badge.text}`}>
+            {badge.label}
           </span>
         </div>
       </div>
