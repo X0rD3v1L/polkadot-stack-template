@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useChainStore } from "../store/chainStore";
 import { devAccounts } from "../hooks/useAccount";
 import { evmDevAccounts } from "../config/evm";
@@ -13,6 +13,10 @@ import {
   injectSpektrExtension,
   SpektrExtensionName,
 } from "@novasamatech/product-sdk";
+import {
+  getSs58AddressInfo,
+  Keccak256,
+} from "@polkadot-api/substrate-bindings";
 
 type HostEnvironment = "desktop-webview" | "web-iframe" | "standalone";
 
@@ -32,11 +36,28 @@ function isInHost(): boolean {
   return detectHostEnvironment() !== "standalone";
 }
 
+function ss58ToH160(ss58Address: string): `0x${string}` {
+  const info = getSs58AddressInfo(ss58Address);
+  if (!info.isValid) return "0x0000000000000000000000000000000000000000";
+  const pub = info.publicKey;
+  const isEthDerived = pub.slice(20).every((b) => b === 0xee);
+  const ethBytes = isEthDerived ? pub.slice(0, 20) : Keccak256(pub).slice(-20);
+  const hex = Array.from(ethBytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `0x${hex}`;
+}
+
 interface DisplayAccount {
   name: string;
   ss58: string;
   eth: string;
   type: "dev" | "extension" | "spektr";
+}
+
+interface AccountInfo {
+  balance: bigint;
+  nonce: number;
 }
 
 function formatDispatchError(err: unknown): string {
@@ -48,22 +69,41 @@ function formatDispatchError(err: unknown): string {
   return JSON.stringify(err);
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
+function formatBalance(planck: bigint): string {
+  const whole = planck / 1_000_000_000_000n;
+  const frac = planck % 1_000_000_000_000n;
+  if (frac === 0n) return whole.toLocaleString();
+  const fracStr = frac.toString().padStart(12, "0").replace(/0+$/, "");
+  return `${whole.toLocaleString()}.${fracStr}`;
+}
 
+function CopyableAddress({
+  label,
+  address,
+}: {
+  label: string;
+  address: string;
+}) {
+  const [copied, setCopied] = useState(false);
   function handleCopy() {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
-
   return (
-    <button
+    <div
       onClick={handleCopy}
-      className="px-1.5 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-300"
+      className="flex items-center gap-2 cursor-pointer group"
+      title="Click to copy"
     >
-      {copied ? "Copied!" : "Copy"}
-    </button>
+      <span className="text-xs text-gray-500 w-8 shrink-0">{label}</span>
+      <code className="text-xs text-gray-300 font-mono break-all flex-1 group-hover:text-white transition-colors">
+        {address}
+      </code>
+      <span className="text-xs text-gray-500 group-hover:text-gray-300 shrink-0 transition-colors">
+        {copied ? "Copied!" : "Copy"}
+      </span>
+    </div>
   );
 }
 
@@ -82,14 +122,52 @@ export default function AccountsPage() {
   >("detecting");
   const [fundStatus, setFundStatus] = useState<string | null>(null);
   const [fundAmount, setFundAmount] = useState("10000");
+  const [accountInfos, setAccountInfos] = useState<
+    Record<string, AccountInfo>
+  >({});
 
   // Build dev account display list
   const devDisplayAccounts: DisplayAccount[] = devAccounts.map((acc, i) => ({
     name: acc.name,
     ss58: acc.address,
-    eth: evmDevAccounts[i]?.account.address ?? "N/A",
+    eth: evmDevAccounts[i]?.account.address ?? ss58ToH160(acc.address),
     type: "dev",
   }));
+
+  // All SS58 addresses to query
+  const allAddresses = [
+    ...devAccounts.map((a) => a.address),
+    ...extensionAccounts.map((a) => a.address),
+    ...spektrAccounts.map((a) => a.address),
+  ];
+
+  // Query balances and nonces
+  const fetchAccountInfos = useCallback(async () => {
+    if (!connected || allAddresses.length === 0) return;
+    try {
+      const client = getClient(wsUrl);
+      const api = client.getTypedApi(stack_template);
+      const infos: Record<string, AccountInfo> = {};
+      for (const addr of allAddresses) {
+        try {
+          const info = await api.query.System.Account.getValue(addr);
+          infos[addr] = {
+            balance: info.data.free,
+            nonce: info.nonce,
+          };
+        } catch {
+          // Skip accounts that fail
+        }
+      }
+      setAccountInfos(infos);
+    } catch (e) {
+      console.error("Failed to fetch account infos:", e);
+    }
+  }, [connected, wsUrl, allAddresses.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchAccountInfos();
+  }, [fetchAccountInfos]);
 
   // Detect host environment and inject Spektr on mount
   useEffect(() => {
@@ -98,7 +176,6 @@ export default function AccountsPage() {
         setSpektrStatus("unavailable");
         return;
       }
-
       setSpektrStatus("injecting");
       try {
         let injected = false;
@@ -109,24 +186,20 @@ export default function AccountsPage() {
           }
           if (i < 9) await new Promise((r) => setTimeout(r, 500));
         }
-
         if (!injected) {
           setSpektrStatus("failed");
           return;
         }
-
         const ext = await connectInjectedExtension(SpektrExtensionName);
         const accounts = ext.getAccounts();
         setSpektrAccounts(accounts);
         setSpektrStatus("connected");
-
         ext.subscribe((updated) => setSpektrAccounts(updated));
       } catch (e) {
         console.error("[Spektr] Init failed:", e);
         setSpektrStatus("failed");
       }
     }
-
     initSpektr();
   }, []);
 
@@ -173,7 +246,6 @@ export default function AccountsPage() {
       const client = getClient(wsUrl);
       const api = client.getTypedApi(stack_template);
       const aliceSigner = devAccounts[0].signer;
-
       const tx = api.tx.Sudo.sudo({
         call: api.tx.Balances.force_set_balance({
           who: { type: "Id", value: ss58Address },
@@ -186,6 +258,7 @@ export default function AccountsPage() {
         return;
       }
       setFundStatus(`Funded ${accountName} with ${fundAmount} tokens!`);
+      fetchAccountInfos();
     } catch (e) {
       console.error("Fund failed:", e);
       setFundStatus(`Error: ${e instanceof Error ? e.message : e}`);
@@ -198,16 +271,18 @@ export default function AccountsPage() {
     talisman: "Talisman",
   };
 
-  const typeBadge: Record<string, { bg: string; text: string; label: string }> =
-    {
-      dev: { bg: "bg-blue-900", text: "text-blue-300", label: "Dev" },
-      extension: {
-        bg: "bg-purple-900",
-        text: "text-purple-300",
-        label: "Extension",
-      },
-      spektr: { bg: "bg-pink-900", text: "text-pink-300", label: "Spektr" },
-    };
+  const typeBadge: Record<
+    string,
+    { bg: string; text: string; label: string }
+  > = {
+    dev: { bg: "bg-blue-900", text: "text-blue-300", label: "Dev" },
+    extension: {
+      bg: "bg-purple-900",
+      text: "text-purple-300",
+      label: "Extension",
+    },
+    spektr: { bg: "bg-pink-900", text: "text-pink-300", label: "Spektr" },
+  };
 
   return (
     <div className="space-y-6">
@@ -229,6 +304,12 @@ export default function AccountsPage() {
             onChange={(e) => setFundAmount(e.target.value)}
             className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-white w-40 text-sm"
           />
+          <button
+            onClick={fetchAccountInfos}
+            className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-xs"
+          >
+            Refresh Balances
+          </button>
         </div>
         {fundStatus && (
           <p
@@ -250,6 +331,7 @@ export default function AccountsPage() {
             <AccountCard
               key={acc.ss58}
               account={acc}
+              info={accountInfos[acc.ss58]}
               badge={typeBadge[acc.type]}
               onFund={() => fundAccount(acc.ss58, acc.name)}
               connected={connected}
@@ -306,9 +388,10 @@ export default function AccountsPage() {
                 account={{
                   name: acc.name || "Spektr Account",
                   ss58: acc.address,
-                  eth: "N/A",
+                  eth: ss58ToH160(acc.address),
                   type: "spektr",
                 }}
+                info={accountInfos[acc.address]}
                 badge={typeBadge.spektr}
                 onFund={() =>
                   fundAccount(acc.address, acc.name || "Spektr account")
@@ -349,9 +432,10 @@ export default function AccountsPage() {
                   account={{
                     name: acc.name || "Unnamed",
                     ss58: acc.address,
-                    eth: "N/A",
+                    eth: ss58ToH160(acc.address),
                     type: "extension",
                   }}
+                  info={accountInfos[acc.address]}
                   badge={typeBadge.extension}
                   onFund={() =>
                     fundAccount(acc.address, acc.name || "Extension account")
@@ -412,11 +496,13 @@ export default function AccountsPage() {
 
 function AccountCard({
   account,
+  info,
   badge,
   onFund,
   connected,
 }: {
   account: DisplayAccount;
+  info?: AccountInfo;
   badge: { bg: string; text: string; label: string };
   onFund: () => void;
   connected: boolean;
@@ -425,7 +511,12 @@ function AccountCard({
     <div className="bg-gray-800 rounded p-3 space-y-2">
       <div className="flex items-center justify-between">
         <span className="font-semibold text-gray-200">{account.name}</span>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {info && (
+            <span className="text-xs text-gray-400 font-mono">
+              {formatBalance(info.balance)} | nonce: {info.nonce}
+            </span>
+          )}
           {connected && (
             <button
               onClick={onFund}
@@ -434,28 +525,16 @@ function AccountCard({
               Fund
             </button>
           )}
-          <span className={`px-2 py-0.5 rounded text-xs ${badge.bg} ${badge.text}`}>
+          <span
+            className={`px-2 py-0.5 rounded text-xs ${badge.bg} ${badge.text}`}
+          >
             {badge.label}
           </span>
         </div>
       </div>
       <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 w-8">SS58</span>
-          <code className="text-xs text-gray-300 font-mono break-all flex-1">
-            {account.ss58}
-          </code>
-          <CopyButton text={account.ss58} />
-        </div>
-        {account.eth !== "N/A" && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 w-8">ETH</span>
-            <code className="text-xs text-gray-300 font-mono break-all flex-1">
-              {account.eth}
-            </code>
-            <CopyButton text={account.eth} />
-          </div>
-        )}
+        <CopyableAddress label="SS58" address={account.ss58} />
+        <CopyableAddress label="ETH" address={account.eth} />
       </div>
     </div>
   );
