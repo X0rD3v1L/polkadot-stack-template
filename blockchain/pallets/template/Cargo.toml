@@ -1,6 +1,6 @@
 [package]
 name = "pallet-template"
-description = "A template pallet demonstrating a simple counter with per-account storage."
+description = "A template pallet demonstrating proof of existence with per-hash claims."
 version = "0.1.0"
 license.workspace = true
 authors.workspace = true

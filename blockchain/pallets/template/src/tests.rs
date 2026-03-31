@@ -1,97 +1,112 @@
-use crate::{mock::*, pallet::Error, Counters};
+use crate::{mock::*, pallet::Error, Claims};
 use frame::testing_prelude::*;
 
+fn test_hash(n: u64) -> H256 {
+	H256::from_low_u64_be(n)
+}
+
 #[test]
-fn set_counter_works() {
+fn create_claim_works() {
 	new_test_ext().execute_with(|| {
-		// Counter starts at zero (ValueQuery default).
-		assert_eq!(Counters::<Test>::get(1), 0);
-		// Set it to 42.
-		assert_ok!(Counter::set_counter(RuntimeOrigin::signed(1), 42));
-		assert_eq!(Counters::<Test>::get(1), 42);
+		let hash = test_hash(1);
+		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
+		assert!(Claims::<Test>::contains_key(&hash));
+		let (owner, _block) = Claims::<Test>::get(&hash).unwrap();
+		assert_eq!(owner, 1);
 	});
 }
 
 #[test]
-fn set_counter_emits_event() {
+fn create_claim_records_block_number() {
 	new_test_ext().execute_with(|| {
-		// Go past genesis block so events get deposited.
+		System::set_block_number(5);
+		let hash = test_hash(1);
+		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
+		let (_, block) = Claims::<Test>::get(&hash).unwrap();
+		assert_eq!(block, 5);
+	});
+}
+
+#[test]
+fn create_claim_emits_event() {
+	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
-		assert_ok!(Counter::set_counter(RuntimeOrigin::signed(1), 42));
+		let hash = test_hash(1);
+		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
 		System::assert_last_event(
-			crate::Event::CounterSet { who: 1, value: 42 }.into(),
+			crate::Event::ClaimCreated { who: 1, hash }.into(),
 		);
 	});
 }
 
 #[test]
-fn increment_works() {
+fn create_claim_fails_if_already_claimed() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Counter::set_counter(RuntimeOrigin::signed(1), 10));
-		assert_ok!(Counter::increment(RuntimeOrigin::signed(1)));
-		assert_eq!(Counters::<Test>::get(1), 11);
-	});
-}
-
-#[test]
-fn increment_from_zero_works() {
-	new_test_ext().execute_with(|| {
-		// Incrementing when no value was set should go from 0 to 1.
-		assert_ok!(Counter::increment(RuntimeOrigin::signed(1)));
-		assert_eq!(Counters::<Test>::get(1), 1);
-	});
-}
-
-#[test]
-fn increment_emits_event() {
-	new_test_ext().execute_with(|| {
-		System::set_block_number(1);
-		assert_ok!(Counter::set_counter(RuntimeOrigin::signed(1), 5));
-		assert_ok!(Counter::increment(RuntimeOrigin::signed(1)));
-		System::assert_last_event(
-			crate::Event::CounterIncremented { who: 1, new_value: 6 }.into(),
-		);
-	});
-}
-
-#[test]
-fn increment_overflow_fails() {
-	new_test_ext().execute_with(|| {
-		// Set counter to max value.
-		Counters::<Test>::insert(1, u32::MAX);
-		// Incrementing should fail with overflow error.
+		let hash = test_hash(1);
+		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
 		assert_noop!(
-			Counter::increment(RuntimeOrigin::signed(1)),
-			Error::<Test>::CounterOverflow,
+			ProofOfExistence::create_claim(RuntimeOrigin::signed(2), hash),
+			Error::<Test>::AlreadyClaimed,
 		);
 	});
 }
 
 #[test]
-fn counters_are_per_account() {
+fn revoke_claim_works() {
 	new_test_ext().execute_with(|| {
-		// Each account has an independent counter.
-		assert_ok!(Counter::set_counter(RuntimeOrigin::signed(1), 100));
-		assert_ok!(Counter::set_counter(RuntimeOrigin::signed(2), 200));
-		assert_eq!(Counters::<Test>::get(1), 100);
-		assert_eq!(Counters::<Test>::get(2), 200);
+		let hash = test_hash(1);
+		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
+		assert_ok!(ProofOfExistence::revoke_claim(RuntimeOrigin::signed(1), hash));
+		assert!(!Claims::<Test>::contains_key(&hash));
+	});
+}
 
-		// Incrementing one doesn't affect the other.
-		assert_ok!(Counter::increment(RuntimeOrigin::signed(1)));
-		assert_eq!(Counters::<Test>::get(1), 101);
-		assert_eq!(Counters::<Test>::get(2), 200);
+#[test]
+fn revoke_claim_emits_event() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let hash = test_hash(1);
+		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
+		assert_ok!(ProofOfExistence::revoke_claim(RuntimeOrigin::signed(1), hash));
+		System::assert_last_event(
+			crate::Event::ClaimRevoked { who: 1, hash }.into(),
+		);
+	});
+}
+
+#[test]
+fn revoke_claim_fails_if_not_owner() {
+	new_test_ext().execute_with(|| {
+		let hash = test_hash(1);
+		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
+		assert_noop!(
+			ProofOfExistence::revoke_claim(RuntimeOrigin::signed(2), hash),
+			Error::<Test>::NotClaimOwner,
+		);
+	});
+}
+
+#[test]
+fn revoke_claim_fails_if_not_found() {
+	new_test_ext().execute_with(|| {
+		let hash = test_hash(99);
+		assert_noop!(
+			ProofOfExistence::revoke_claim(RuntimeOrigin::signed(1), hash),
+			Error::<Test>::ClaimNotFound,
+		);
 	});
 }
 
 #[test]
 fn unsigned_origin_is_rejected() {
 	new_test_ext().execute_with(|| {
+		let hash = test_hash(1);
 		assert_noop!(
-			Counter::set_counter(RuntimeOrigin::none(), 42),
+			ProofOfExistence::create_claim(RuntimeOrigin::none(), hash),
 			DispatchError::BadOrigin,
 		);
 		assert_noop!(
-			Counter::increment(RuntimeOrigin::none()),
+			ProofOfExistence::revoke_claim(RuntimeOrigin::none(), hash),
 			DispatchError::BadOrigin,
 		);
 	});

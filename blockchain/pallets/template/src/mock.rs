@@ -26,7 +26,7 @@ mod test_runtime {
 	#[runtime::pallet_index(0)]
 	pub type System = frame_system;
 	#[runtime::pallet_index(1)]
-	pub type Counter = crate;
+	pub type ProofOfExistence = crate;
 }
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]

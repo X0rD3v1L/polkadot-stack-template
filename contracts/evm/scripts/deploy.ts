@@ -28,10 +28,10 @@ export const deployments: { evm: string | null; pvm: string | null } = ${JSON.st
 }
 
 async function main() {
-  console.log("Deploying Counter (EVM/solc)...");
-  const counter = await hre.viem.deployContract("Counter");
-  console.log(`EVM Counter deployed to: ${counter.address}`);
-  updateDeployments("evm", counter.address);
+  console.log("Deploying ProofOfExistence (EVM/solc)...");
+  const poe = await hre.viem.deployContract("ProofOfExistence");
+  console.log(`EVM ProofOfExistence deployed to: ${poe.address}`);
+  updateDeployments("evm", poe.address);
   console.log("Updated deployments.json");
 }
 

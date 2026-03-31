@@ -1,14 +1,17 @@
-//! # Template Pallet - Counter
+//! # Template Pallet - Proof of Existence
 //!
-//! A simple counter pallet that demonstrates core FRAME concepts:
-//! - Per-account storage using `StorageMap`
-//! - Dispatchable calls (`set_counter`, `increment`)
+//! A proof of existence pallet that demonstrates core FRAME concepts:
+//! - Per-hash storage using `StorageMap`
+//! - Dispatchable calls (`create_claim`, `revoke_claim`)
 //! - Events and errors
 //! - Weight annotations via benchmarks
 //! - Mock runtime and unit tests
 //!
-//! This pallet implements the same "counter" concept as the Solidity smart contract
-//! templates, allowing developers to compare the three approaches side-by-side.
+//! Users submit a 32-byte blake2b-256 hash (e.g. of a file) to create an on-chain
+//! claim recording who submitted it and when. Only the claim owner can revoke it.
+//!
+//! This pallet implements the same "proof of existence" concept as the Solidity smart
+//! contract templates, allowing developers to compare the three approaches side-by-side.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -43,60 +46,72 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
-	/// Storage for counter values, one per account.
+	/// Storage for proof-of-existence claims.
+	/// Maps a 32-byte hash to the (owner, block_number) that created the claim.
 	#[pallet::storage]
-	pub type Counters<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u32, ValueQuery>;
+	pub type Claims<T: Config> =
+		StorageMap<_, Blake2_128Concat, H256, (T::AccountId, BlockNumberFor<T>), OptionQuery>;
 
 	/// Events emitted by this pallet.
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// A counter was set to a specific value.
-		CounterSet {
-			/// The account that set the counter.
+		/// A new claim was created.
+		ClaimCreated {
+			/// The account that created the claim.
 			who: T::AccountId,
-			/// The new counter value.
-			value: u32,
+			/// The hash that was claimed.
+			hash: H256,
 		},
-		/// A counter was incremented.
-		CounterIncremented {
-			/// The account whose counter was incremented.
+		/// A claim was revoked by its owner.
+		ClaimRevoked {
+			/// The account that revoked the claim.
 			who: T::AccountId,
-			/// The new counter value after incrementing.
-			new_value: u32,
+			/// The hash that was revoked.
+			hash: H256,
 		},
 	}
 
 	/// Errors that can occur in this pallet.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Counter would overflow if incremented.
-		CounterOverflow,
+		/// This hash has already been claimed.
+		AlreadyClaimed,
+		/// The caller is not the owner of this claim.
+		NotClaimOwner,
+		/// No claim exists for this hash.
+		ClaimNotFound,
 	}
 
 	/// Dispatchable calls.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set the counter for the calling account to a specific value.
+		/// Create a new proof-of-existence claim for the given hash.
+		///
+		/// The hash must not already be claimed. The caller becomes the owner,
+		/// and the current block number is recorded.
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::set_counter())]
-		pub fn set_counter(origin: OriginFor<T>, value: u32) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::create_claim())]
+		pub fn create_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Counters::<T>::insert(&who, value);
-			Self::deposit_event(Event::CounterSet { who, value });
+			ensure!(!Claims::<T>::contains_key(&hash), Error::<T>::AlreadyClaimed);
+			let block_number = frame_system::Pallet::<T>::block_number();
+			Claims::<T>::insert(&hash, (&who, block_number));
+			Self::deposit_event(Event::ClaimCreated { who, hash });
 			Ok(())
 		}
 
-		/// Increment the counter for the calling account by one.
+		/// Revoke an existing proof-of-existence claim.
+		///
+		/// Only the original claim owner can revoke it. The storage entry is removed.
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::increment())]
-		pub fn increment(origin: OriginFor<T>) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::revoke_claim())]
+		pub fn revoke_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let new_value = Counters::<T>::get(&who)
-				.checked_add(1)
-				.ok_or(Error::<T>::CounterOverflow)?;
-			Counters::<T>::insert(&who, new_value);
-			Self::deposit_event(Event::CounterIncremented { who, new_value });
+			let (owner, _) = Claims::<T>::get(&hash).ok_or(Error::<T>::ClaimNotFound)?;
+			ensure!(owner == who, Error::<T>::NotClaimOwner);
+			Claims::<T>::remove(&hash);
+			Self::deposit_event(Event::ClaimRevoked { who, hash });
 			Ok(())
 		}
 	}

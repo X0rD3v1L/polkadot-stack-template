@@ -1,12 +1,12 @@
 {
-  "name": "evm-counter",
+  "name": "evm-proof-of-existence",
   "version": "0.1.0",
-  "description": "EVM deployment of the Counter contract using Hardhat + solc + viem",
+  "description": "EVM deployment of the ProofOfExistence contract using Hardhat + solc + viem",
   "scripts": {
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "deploy:local": "npx hardhat run scripts/deploy.ts --network local",
-    "deploy:testnet": "npx hardhat ignition deploy ./ignition/modules/Counter.js --network polkadotTestnet",
+    "deploy:testnet": "npx hardhat ignition deploy ./ignition/modules/ProofOfExistence.js --network polkadotTestnet",
     "verify": "npx hardhat verify --network polkadotTestnet"
   },
   "devDependencies": {

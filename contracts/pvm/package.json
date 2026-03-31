@@ -1,7 +1,7 @@
 {
-  "name": "pvm-counter",
+  "name": "pvm-proof-of-existence",
   "version": "0.1.0",
-  "description": "PVM deployment of the Counter contract using Hardhat + resolc + viem",
+  "description": "PVM deployment of the ProofOfExistence contract using Hardhat + resolc + viem",
   "scripts": {
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",

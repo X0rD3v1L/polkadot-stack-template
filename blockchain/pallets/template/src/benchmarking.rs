@@ -7,27 +7,29 @@ use frame::{deps::frame_benchmarking::v2::*, prelude::*};
 mod benchmarks {
 	use super::*;
 	#[cfg(test)]
-	use crate::pallet::Pallet as Counter;
+	use crate::pallet::Pallet as ProofOfExistence;
 	use frame_system::RawOrigin;
 
 	#[benchmark]
-	fn set_counter() {
+	fn create_claim() {
 		let caller: T::AccountId = whitelisted_caller();
+		let hash = H256::repeat_byte(1);
 		#[extrinsic_call]
-		set_counter(RawOrigin::Signed(caller.clone()), 42);
+		create_claim(RawOrigin::Signed(caller.clone()), hash);
 
-		assert_eq!(Counters::<T>::get(&caller), 42);
+		assert!(Claims::<T>::contains_key(&hash));
 	}
 
 	#[benchmark]
-	fn increment() {
+	fn revoke_claim() {
 		let caller: T::AccountId = whitelisted_caller();
-		Counters::<T>::insert(&caller, 10);
+		let hash = H256::repeat_byte(1);
+		Claims::<T>::insert(&hash, (&caller, frame_system::Pallet::<T>::block_number()));
 		#[extrinsic_call]
-		increment(RawOrigin::Signed(caller.clone()));
+		revoke_claim(RawOrigin::Signed(caller.clone()), hash);
 
-		assert_eq!(Counters::<T>::get(&caller), 11);
+		assert!(!Claims::<T>::contains_key(&hash));
 	}
 
-	impl_benchmark_test_suite!(Counter, crate::mock::new_test_ext(), crate::mock::Test);
+	impl_benchmark_test_suite!(ProofOfExistence, crate::mock::new_test_ext(), crate::mock::Test);
 }
