@@ -1,13 +1,13 @@
-import ContractCounterPage from "../components/ContractCounterPage";
+import ContractProofOfExistencePage from "../components/ContractProofOfExistencePage";
 import { deployments } from "../config/deployments";
 
 export default function PvmContractPage() {
   return (
-    <ContractCounterPage
-      title="PVM Counter (resolc)"
+    <ContractProofOfExistencePage
+      title="PVM Proof of Existence (resolc)"
       description={
         <>
-          Interact with the same Solidity counter compiled with{" "}
+          Same Solidity contract compiled with{" "}
           <code className="bg-gray-800 px-1 rounded">resolc</code> to PolkaVM
           (RISC-V) bytecode, deployed via pallet-revive. Same frontend code —
           the eth-rpc proxy provides an identical interface.

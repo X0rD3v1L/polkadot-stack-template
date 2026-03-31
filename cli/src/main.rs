@@ -25,12 +25,12 @@ enum Commands {
         #[command(subcommand)]
         action: commands::chain::ChainAction,
     },
-    /// Counter pallet interaction commands
+    /// Proof of existence pallet commands
     Pallet {
         #[command(subcommand)]
         action: commands::pallet::PalletAction,
     },
-    /// Counter contract interaction commands (via eth-rpc)
+    /// Proof of existence contract commands (via eth-rpc)
     Contract {
         #[command(subcommand)]
         action: commands::contract::ContractAction,

@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { getClient, disconnectClient } from "../hooks/useChain";
 import { useChainStore } from "../store/chainStore";
 import { stack_template } from "@polkadot-api/descriptors";
-import { devAccounts } from "../hooks/useAccount";
 
 export default function HomePage() {
   const {
@@ -47,9 +46,7 @@ export default function HomePage() {
 
         try {
           const api = client.getTypedApi(stack_template);
-          await api.query.TemplatePallet.Counters.getValue(
-            devAccounts[0].address
-          );
+          await api.query.TemplatePallet.Claims.getEntries({ limit: 1 });
           detected.templatePallet = true;
         } catch {
           detected.templatePallet = false;
@@ -102,9 +99,10 @@ export default function HomePage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Polkadot Stack Template</h1>
       <p className="text-gray-400">
-        A developer starter template demonstrating the same Counter concept
+        A developer starter template demonstrating Proof of Existence
         implemented three ways: as a Substrate pallet, a Solidity EVM contract,
-        and a PVM contract (Solidity compiled via resolc).
+        and a PVM contract (Solidity compiled via resolc). Drop a file to claim
+        its hash on-chain.
       </p>
 
       <div className="bg-gray-900 rounded-lg p-5 border border-gray-800 space-y-4">
@@ -165,24 +163,24 @@ export default function HomePage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card
-          title="Pallet Counter"
-          description="Interact with the counter implemented as a Substrate FRAME pallet using PAPI."
+          title="Pallet PoE"
+          description="Claim file hashes via the Substrate FRAME pallet using PAPI."
           link="/pallet"
           color="text-blue-400"
           available={pallets.templatePallet}
           unavailableReason="TemplatePallet not found in connected runtime"
         />
         <Card
-          title="EVM Counter (solc)"
-          description="Solidity counter compiled with solc, deployed to the REVM backend via standard Ethereum tooling."
+          title="EVM PoE (solc)"
+          description="Same proof of existence via Solidity compiled with solc, deployed to the EVM backend."
           link="/evm"
           color="text-purple-400"
           available={pallets.revive}
           unavailableReason="pallet-revive not found in connected runtime"
         />
         <Card
-          title="PVM Counter (resolc)"
-          description="Same Solidity counter compiled with resolc to PolkaVM bytecode, deployed via pallet-revive."
+          title="PVM PoE (resolc)"
+          description="Same Solidity contract compiled with resolc to PolkaVM bytecode, deployed via pallet-revive."
           link="/pvm"
           color="text-green-400"
           available={pallets.revive}

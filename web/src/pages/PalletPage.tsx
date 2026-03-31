@@ -1,70 +1,95 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useChainStore } from "../store/chainStore";
 import { devAccounts } from "../hooks/useAccount";
 import { getClient } from "../hooks/useChain";
 import { stack_template } from "@polkadot-api/descriptors";
+import { Binary } from "polkadot-api";
+import FileDropZone from "../components/FileDropZone";
+
+interface Claim {
+  hash: string;
+  owner: string;
+  block: number;
+}
 
 export default function PalletPage() {
-  const { selectedAccount, setSelectedAccount, setTxStatus, txStatus } =
+  const { selectedAccount, setSelectedAccount, setTxStatus, txStatus, wsUrl } =
     useChainStore();
-  const [counterValue, setCounterValue] = useState<number | null>(null);
-  const [inputValue, setInputValue] = useState("");
+  const [fileHash, setFileHash] = useState<`0x${string}` | null>(null);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const account = devAccounts[selectedAccount];
 
   function getApi() {
-    const client = getClient();
+    const client = getClient(wsUrl);
     return client.getTypedApi(stack_template);
   }
 
-  async function queryCounter() {
+  const onFileHashed = useCallback((hash: `0x${string}`) => {
+    setFileHash(hash);
+  }, []);
+
+  async function loadClaims() {
     try {
+      setLoading(true);
       const api = getApi();
-      const value = await api.query.TemplatePallet.Counters.getValue(account.address);
-      setCounterValue(value);
-      setTxStatus(null);
+      const entries = await api.query.TemplatePallet.Claims.getEntries();
+      const result: Claim[] = entries.map((entry) => ({
+        hash: entry.keyArgs[0],
+        owner: entry.value[0],
+        block: entry.value[1],
+      }));
+      setClaims(result);
     } catch (e) {
-      console.error("Failed to query counter:", e);
-      setTxStatus(`Error: ${e}`);
+      console.error("Failed to load claims:", e);
+    } finally {
+      setLoading(false);
     }
   }
 
-  async function setCounter() {
+  async function createClaim() {
+    if (!fileHash) return;
     try {
-      setTxStatus("Submitting set_counter...");
+      setTxStatus("Submitting create_claim...");
       const api = getApi();
-      const tx = api.tx.TemplatePallet.set_counter({
-        value: parseInt(inputValue) || 0,
+      const tx = api.tx.TemplatePallet.create_claim({
+        hash: Binary.fromHex(fileHash),
       });
       await tx.signAndSubmit(account.signer);
-      setTxStatus("set_counter submitted successfully!");
-      queryCounter();
+      setTxStatus("Claim created successfully!");
+      setFileHash(null);
+      loadClaims();
     } catch (e) {
       console.error("Transaction failed:", e);
-      setTxStatus(`Error: ${e}`);
+      setTxStatus(`Error: ${e instanceof Error ? e.message : e}`);
     }
   }
 
-  async function increment() {
+  async function revokeClaim(hash: string) {
     try {
-      setTxStatus("Submitting increment...");
+      setTxStatus("Submitting revoke_claim...");
       const api = getApi();
-      const tx = api.tx.TemplatePallet.increment();
+      const tx = api.tx.TemplatePallet.revoke_claim({
+        hash: Binary.fromHex(hash),
+      });
       await tx.signAndSubmit(account.signer);
-      setTxStatus("increment submitted successfully!");
-      queryCounter();
+      setTxStatus("Claim revoked successfully!");
+      loadClaims();
     } catch (e) {
       console.error("Transaction failed:", e);
-      setTxStatus(`Error: ${e}`);
+      setTxStatus(`Error: ${e instanceof Error ? e.message : e}`);
     }
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-blue-400">Pallet Counter</h1>
+      <h1 className="text-2xl font-bold text-blue-400">
+        Pallet Proof of Existence
+      </h1>
       <p className="text-gray-400">
-        Interact with the counter implemented as a Substrate FRAME pallet. Uses
-        PAPI to read storage and submit signed extrinsics.
+        Claim ownership of file hashes on-chain via the Substrate FRAME pallet.
+        Uses PAPI to submit extrinsics and read storage.
       </p>
 
       <div className="bg-gray-900 rounded-lg p-5 border border-gray-800 space-y-4">
@@ -85,40 +110,24 @@ export default function PalletPage() {
           </select>
         </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={queryCounter}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
-          >
-            Query Counter
-          </button>
-          <span className="text-lg font-mono self-center">
-            Value: {counterValue !== null ? counterValue : "—"}
-          </span>
-        </div>
+        <FileDropZone onFileHashed={onFileHashed} />
 
-        <div className="flex gap-3">
-          <input
-            type="number"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Enter value"
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white flex-1"
-          />
-          <button
-            onClick={setCounter}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
-          >
-            Set Counter
-          </button>
-        </div>
-
-        <button
-          onClick={increment}
-          className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm"
-        >
-          Increment
-        </button>
+        {fileHash && (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-400">
+              Blake2b-256:{" "}
+              <code className="text-white font-mono text-xs break-all">
+                {fileHash}
+              </code>
+            </p>
+            <button
+              onClick={createClaim}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
+            >
+              Create Claim
+            </button>
+          </div>
+        )}
 
         {txStatus && (
           <p
@@ -126,6 +135,53 @@ export default function PalletPage() {
           >
             {txStatus}
           </p>
+        )}
+      </div>
+
+      <div className="bg-gray-900 rounded-lg p-5 border border-gray-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-300">Claims</h2>
+          <button
+            onClick={loadClaims}
+            disabled={loading}
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
+          >
+            {loading ? "Loading..." : "Refresh"}
+          </button>
+        </div>
+
+        {claims.length === 0 ? (
+          <p className="text-gray-500 text-sm">
+            No claims found. Click Refresh to load.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {claims.map((claim) => (
+              <div
+                key={claim.hash}
+                className="bg-gray-800 rounded p-3 text-sm space-y-1"
+              >
+                <p className="font-mono text-xs text-gray-300 break-all">
+                  {claim.hash}
+                </p>
+                <p className="text-gray-400">
+                  Owner:{" "}
+                  <span className="text-gray-300">
+                    {claim.owner.slice(0, 8)}...{claim.owner.slice(-6)}
+                  </span>{" "}
+                  | Block: <span className="text-gray-300">{claim.block}</span>
+                </p>
+                {claim.owner === account.address && (
+                  <button
+                    onClick={() => revokeClaim(claim.hash)}
+                    className="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-white text-xs"
+                  >
+                    Revoke
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

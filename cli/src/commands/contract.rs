@@ -1,4 +1,4 @@
-use alloy::primitives::Address;
+use alloy::primitives::{Address, FixedBytes};
 use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
 use alloy::sol;
@@ -13,10 +13,12 @@ const CHARLIE_KEY: &str = "0x0b6e18cafb6ed99687ec547bd28139cafbd3a4f28014f864007
 
 sol! {
     #[sol(rpc)]
-    contract Counter {
-        function getCounter(address account) external view returns (uint256);
-        function setCounter(uint256 value) external;
-        function increment() external;
+    contract ProofOfExistence {
+        function createClaim(bytes32 documentHash) external;
+        function revokeClaim(bytes32 documentHash) external;
+        function getClaim(bytes32 documentHash) external view returns (address owner, uint256 blockNumber);
+        function getClaimCount() external view returns (uint256);
+        function getClaimHashAtIndex(uint256 index) external view returns (bytes32);
     }
 }
 
@@ -30,34 +32,35 @@ pub struct Deployments {
 pub enum ContractAction {
     /// Show deployed contract addresses and dev accounts
     Info,
-    /// Get the counter value for an account
-    Get {
+    /// Create a proof-of-existence claim
+    CreateClaim {
         /// Contract type: evm or pvm
         #[arg(value_parser = ["evm", "pvm"])]
         contract_type: String,
-        /// Account name (alice, bob, charlie) or Ethereum address (0x...)
-        #[arg(default_value = "alice")]
-        account: String,
-    },
-    /// Set the counter to a value
-    Set {
-        /// Contract type: evm or pvm
-        #[arg(value_parser = ["evm", "pvm"])]
-        contract_type: String,
-        /// Value to set
-        value: u64,
+        /// The 0x-prefixed blake2b-256 hash to claim
+        hash: String,
         /// Signing account (alice, bob, charlie)
         #[arg(long, default_value = "alice")]
         signer: String,
     },
-    /// Increment the counter
-    Increment {
+    /// Revoke a proof-of-existence claim
+    RevokeClaim {
         /// Contract type: evm or pvm
         #[arg(value_parser = ["evm", "pvm"])]
         contract_type: String,
+        /// The 0x-prefixed hash to revoke
+        hash: String,
         /// Signing account (alice, bob, charlie)
         #[arg(long, default_value = "alice")]
         signer: String,
+    },
+    /// Get the claim details for a hash
+    GetClaim {
+        /// Contract type: evm or pvm
+        #[arg(value_parser = ["evm", "pvm"])]
+        contract_type: String,
+        /// The 0x-prefixed hash to look up
+        hash: String,
     },
 }
 
@@ -73,14 +76,8 @@ fn resolve_signer(name: &str) -> Result<PrivateKeySigner, Box<dyn std::error::Er
     Ok(key.parse()?)
 }
 
-fn resolve_address(account: &str) -> Result<Address, Box<dyn std::error::Error>> {
-    match account.to_lowercase().as_str() {
-        "alice" => Ok(resolve_signer("alice")?.address()),
-        "bob" => Ok(resolve_signer("bob")?.address()),
-        "charlie" => Ok(resolve_signer("charlie")?.address()),
-        addr if addr.starts_with("0x") => Ok(addr.parse()?),
-        _ => Err(format!("Unknown account: {account}. Use alice, bob, charlie, or an 0x address.").into()),
-    }
+fn parse_hash(hex_str: &str) -> Result<FixedBytes<32>, Box<dyn std::error::Error>> {
+    Ok(hex_str.parse()?)
 }
 
 fn load_deployments() -> Result<Deployments, Box<dyn std::error::Error>> {
@@ -139,78 +136,85 @@ pub async fn run(
             println!("=======================");
             for name in ["alice", "bob", "charlie"] {
                 let signer = resolve_signer(name)?;
-                println!("{:<10} {}", format!("{}:", capitalize(name)), signer.address());
+                println!(
+                    "{:<10} {}",
+                    format!("{}:", capitalize(name)),
+                    signer.address()
+                );
             }
         }
-        ContractAction::Get {
+        ContractAction::CreateClaim {
             contract_type,
-            account,
+            hash,
+            signer,
         } => {
             let deployments = load_deployments()?;
             let contract_addr = get_contract_address(&deployments, &contract_type)?;
-            let account_addr = resolve_address(&account)?;
+            let document_hash = parse_hash(&hash)?;
+            let wallet = alloy::network::EthereumWallet::from(resolve_signer(&signer)?);
+
+            let provider = ProviderBuilder::new()
+                .wallet(wallet)
+                .connect_http(eth_rpc_url.parse()?);
+            let contract = ProofOfExistence::new(contract_addr, &provider);
+
+            println!(
+                "Submitting createClaim to {} contract...",
+                contract_type.to_uppercase()
+            );
+            let pending = contract.createClaim(document_hash).send().await?;
+            let receipt = pending.get_receipt().await?;
+            println!(
+                "Confirmed in block {}: tx {}",
+                receipt.block_number.unwrap_or_default(),
+                receipt.transaction_hash
+            );
+        }
+        ContractAction::RevokeClaim {
+            contract_type,
+            hash,
+            signer,
+        } => {
+            let deployments = load_deployments()?;
+            let contract_addr = get_contract_address(&deployments, &contract_type)?;
+            let document_hash = parse_hash(&hash)?;
+            let wallet = alloy::network::EthereumWallet::from(resolve_signer(&signer)?);
+
+            let provider = ProviderBuilder::new()
+                .wallet(wallet)
+                .connect_http(eth_rpc_url.parse()?);
+            let contract = ProofOfExistence::new(contract_addr, &provider);
+
+            println!(
+                "Submitting revokeClaim to {} contract...",
+                contract_type.to_uppercase()
+            );
+            let pending = contract.revokeClaim(document_hash).send().await?;
+            let receipt = pending.get_receipt().await?;
+            println!(
+                "Confirmed in block {}: tx {}",
+                receipt.block_number.unwrap_or_default(),
+                receipt.transaction_hash
+            );
+        }
+        ContractAction::GetClaim {
+            contract_type,
+            hash,
+        } => {
+            let deployments = load_deployments()?;
+            let contract_addr = get_contract_address(&deployments, &contract_type)?;
+            let document_hash = parse_hash(&hash)?;
 
             let provider = ProviderBuilder::new().connect_http(eth_rpc_url.parse()?);
-            let counter = Counter::new(contract_addr, &provider);
-            let result = counter.getCounter(account_addr).call().await?;
+            let contract = ProofOfExistence::new(contract_addr, &provider);
 
-            println!(
-                "Counter for {} on {} contract: {}",
-                account,
-                contract_type.to_uppercase(),
-                result
-            );
-        }
-        ContractAction::Set {
-            contract_type,
-            value,
-            signer,
-        } => {
-            let deployments = load_deployments()?;
-            let contract_addr = get_contract_address(&deployments, &contract_type)?;
-            let wallet = alloy::network::EthereumWallet::from(resolve_signer(&signer)?);
-
-            let provider = ProviderBuilder::new()
-                .wallet(wallet)
-                .connect_http(eth_rpc_url.parse()?);
-            let counter = Counter::new(contract_addr, &provider);
-
-            println!("Submitting setCounter({value}) to {} contract...", contract_type.to_uppercase());
-            let pending = counter
-                .setCounter(alloy::primitives::U256::from(value))
-                .send()
-                .await?;
-            let receipt = pending.get_receipt().await?;
-            println!(
-                "Confirmed in block {}: tx {}",
-                receipt.block_number.unwrap_or_default(),
-                receipt.transaction_hash
-            );
-        }
-        ContractAction::Increment {
-            contract_type,
-            signer,
-        } => {
-            let deployments = load_deployments()?;
-            let contract_addr = get_contract_address(&deployments, &contract_type)?;
-            let wallet = alloy::network::EthereumWallet::from(resolve_signer(&signer)?);
-
-            let provider = ProviderBuilder::new()
-                .wallet(wallet)
-                .connect_http(eth_rpc_url.parse()?);
-            let counter = Counter::new(contract_addr, &provider);
-
-            println!("Submitting increment() to {} contract...", contract_type.to_uppercase());
-            let pending = counter
-                .increment()
-                .send()
-                .await?;
-            let receipt = pending.get_receipt().await?;
-            println!(
-                "Confirmed in block {}: tx {}",
-                receipt.block_number.unwrap_or_default(),
-                receipt.transaction_hash
-            );
+            let result = contract.getClaim(document_hash).call().await?;
+            if result.owner == Address::ZERO {
+                println!("No claim found for this hash");
+            } else {
+                println!("Owner: {}", result.owner);
+                println!("Block:  {}", result.blockNumber);
+            }
         }
     }
 

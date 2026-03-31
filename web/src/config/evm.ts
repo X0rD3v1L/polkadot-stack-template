@@ -9,28 +9,45 @@ import { privateKeyToAccount } from "viem/accounts";
 
 const ETH_RPC_URL = "http://127.0.0.1:8545";
 
-// Counter contract ABI — same for both EVM (solc) and PVM (resolc) deployments
-export const counterAbi = [
+// ProofOfExistence contract ABI — same for both EVM (solc) and PVM (resolc) deployments
+export const proofOfExistenceAbi = [
   {
     type: "function",
-    name: "getCounter",
-    inputs: [{ name: "account", type: "address" }],
+    name: "createClaim",
+    inputs: [{ name: "documentHash", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "revokeClaim",
+    inputs: [{ name: "documentHash", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getClaim",
+    inputs: [{ name: "documentHash", type: "bytes32" }],
+    outputs: [
+      { name: "owner", type: "address" },
+      { name: "blockNumber", type: "uint256" },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getClaimCount",
+    inputs: [],
     outputs: [{ name: "", type: "uint256" }],
     stateMutability: "view",
   },
   {
     type: "function",
-    name: "setCounter",
-    inputs: [{ name: "value", type: "uint256" }],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "increment",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    name: "getClaimHashAtIndex",
+    inputs: [{ name: "index", type: "uint256" }],
+    outputs: [{ name: "", type: "bytes32" }],
+    stateMutability: "view",
   },
 ] as const;
 

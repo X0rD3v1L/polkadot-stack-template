@@ -17943,6 +17943,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "clap",
+ "hex",
  "serde",
  "serde_json",
  "subxt 0.38.1",

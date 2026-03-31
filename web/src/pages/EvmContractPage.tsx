@@ -1,17 +1,17 @@
-import ContractCounterPage from "../components/ContractCounterPage";
+import ContractProofOfExistencePage from "../components/ContractProofOfExistencePage";
 import { deployments } from "../config/deployments";
 
 export default function EvmContractPage() {
   return (
-    <ContractCounterPage
-      title="EVM Counter (solc)"
+    <ContractProofOfExistencePage
+      title="EVM Proof of Existence (solc)"
       description={
         <>
-          Interact with the Solidity counter compiled with{" "}
+          Claim file hashes via the Solidity contract compiled with{" "}
           <code className="bg-gray-800 px-1 rounded">solc</code> and deployed
           via the eth-rpc proxy. Uses{" "}
           <code className="bg-gray-800 px-1 rounded">viem</code> for contract
-          reads and writes.
+          interaction.
         </>
       }
       accentColor="purple"

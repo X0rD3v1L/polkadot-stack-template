@@ -4,91 +4,120 @@ use subxt_signer::sr25519::dev;
 
 #[derive(Subcommand)]
 pub enum PalletAction {
-    /// Get the counter value for an account (default: Alice)
-    Get {
-        /// Account to query (alice, bob, charlie)
-        #[arg(default_value = "alice")]
-        account: String,
+    /// Create a proof-of-existence claim for a hash
+    CreateClaim {
+        /// The 0x-prefixed blake2b-256 hash to claim
+        hash: String,
     },
-    /// Set the counter to a value (signed by Alice)
-    Set {
-        /// Value to set
-        value: u32,
+    /// Revoke a proof-of-existence claim
+    RevokeClaim {
+        /// The 0x-prefixed hash to revoke
+        hash: String,
     },
-    /// Increment the counter (signed by Alice)
-    Increment,
+    /// Get the claim details for a hash
+    GetClaim {
+        /// The 0x-prefixed hash to look up
+        hash: String,
+    },
+    /// List all claims stored in the pallet
+    ListClaims,
+}
+
+fn parse_hash(hex: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let hex = hex.strip_prefix("0x").unwrap_or(hex);
+    if hex.len() != 64 {
+        return Err("Hash must be 32 bytes (64 hex characters)".into());
+    }
+    Ok((0..64)
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
+        .collect::<Result<Vec<_>, _>>()?)
 }
 
 pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::error::Error>> {
     let api = OnlineClient::<PolkadotConfig>::from_url(url).await?;
 
     match action {
-        PalletAction::Get { account } => {
-            let account_id = match account.to_lowercase().as_str() {
-                "alice" => dev::alice().public_key(),
-                "bob" => dev::bob().public_key(),
-                "charlie" => dev::charlie().public_key(),
-                _ => {
-                    println!("Unknown account: {account}. Use alice, bob, or charlie.");
-                    return Ok(());
-                }
-            };
-
+        PalletAction::CreateClaim { hash } => {
+            let hash_bytes = parse_hash(&hash)?;
+            let signer = dev::alice();
+            let tx = subxt::dynamic::tx(
+                "TemplatePallet",
+                "create_claim",
+                vec![("hash", subxt::dynamic::Value::from_bytes(hash_bytes))],
+            );
+            let result = api
+                .tx()
+                .sign_and_submit_then_watch_default(&tx, &signer)
+                .await?
+                .wait_for_finalized_success()
+                .await?;
+            println!(
+                "create_claim finalized in block: {}",
+                result.extrinsic_hash()
+            );
+        }
+        PalletAction::RevokeClaim { hash } => {
+            let hash_bytes = parse_hash(&hash)?;
+            let signer = dev::alice();
+            let tx = subxt::dynamic::tx(
+                "TemplatePallet",
+                "revoke_claim",
+                vec![("hash", subxt::dynamic::Value::from_bytes(hash_bytes))],
+            );
+            let result = api
+                .tx()
+                .sign_and_submit_then_watch_default(&tx, &signer)
+                .await?
+                .wait_for_finalized_success()
+                .await?;
+            println!(
+                "revoke_claim finalized in block: {}",
+                result.extrinsic_hash()
+            );
+        }
+        PalletAction::GetClaim { hash } => {
+            let hash_bytes = parse_hash(&hash)?;
             let storage_query = subxt::dynamic::storage(
                 "TemplatePallet",
-                "Counters",
-                vec![subxt::dynamic::Value::from_bytes(account_id)],
+                "Claims",
+                vec![subxt::dynamic::Value::from_bytes(hash_bytes)],
             );
-
             let result = api
                 .storage()
                 .at_latest()
                 .await?
                 .fetch(&storage_query)
                 .await?;
-
             match result {
-                Some(value) => {
-                    println!("Counter for {account}: {}", value.to_value()?);
-                }
-                None => {
-                    println!("Counter for {account}: 0 (not set)");
-                }
+                Some(value) => println!("Claim: {}", value.to_value()?),
+                None => println!("No claim found for this hash"),
             }
         }
-        PalletAction::Set { value } => {
-            let signer = dev::alice();
-            let tx = subxt::dynamic::tx(
+        PalletAction::ListClaims => {
+            let storage_query = subxt::dynamic::storage(
                 "TemplatePallet",
-                "set_counter",
-                vec![("value", subxt::dynamic::Value::u128(value as u128))],
+                "Claims",
+                Vec::<subxt::dynamic::Value>::new(),
             );
-
-            let result = api
-                .tx()
-                .sign_and_submit_then_watch_default(&tx, &signer)
+            let mut results = api
+                .storage()
+                .at_latest()
                 .await?
-                .wait_for_finalized_success()
+                .iter(storage_query)
                 .await?;
-
-            println!("set_counter({value}) finalized in block: {}", result.extrinsic_hash());
-        }
-        PalletAction::Increment => {
-            let signer = dev::alice();
-            let tx = subxt::dynamic::tx(
-                "TemplatePallet",
-                "increment",
-                Vec::<(&str, subxt::dynamic::Value)>::new(),
-            );
-
-            let result = api
-                .tx()
-                .sign_and_submit_then_watch_default(&tx, &signer)
-                .await?
-                .wait_for_finalized_success()
-                .await?;
-
-            println!("increment() finalized in block: {}", result.extrinsic_hash());
+            let mut count = 0u32;
+            while let Some(Ok(kv)) = results.next().await {
+                let key_len = kv.key_bytes.len();
+                println!("Hash: 0x{}", hex::encode(&kv.key_bytes[key_len - 32..]));
+                println!("  Claim: {}", kv.value.to_value()?);
+                count += 1;
+            }
+            if count == 0 {
+                println!("No claims found");
+            } else {
+                println!("\n{count} claim(s) total");
+            }
         }
     }
 
