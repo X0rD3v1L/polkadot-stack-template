@@ -2,6 +2,10 @@
   "name": "pvm-proof-of-existence",
   "version": "0.1.0",
   "description": "PVM deployment of the ProofOfExistence contract using Hardhat + resolc + viem",
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10"
+  },
   "scripts": {
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",

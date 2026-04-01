@@ -26,9 +26,10 @@ Required for the Solidity contracts (Hardhat) and the frontend (Vite + React).
 Install via [nvm](https://github.com/nvm-sh/nvm) (recommended) or [nodejs.org](https://nodejs.org/).
 
 ```bash
-nvm install 22
-nvm use 22
+nvm use || nvm install
 ```
+
+The repo root includes `.nvmrc`, and the JavaScript projects declare `engines.node` / `engines.npm`, so package managers and editors can surface version mismatches early.
 
 ### Polkadot Omni Node
 
