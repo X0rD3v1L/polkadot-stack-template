@@ -153,7 +153,7 @@ async fn rpc_call<P: Serialize, R: DeserializeOwned>(
     params: P,
 ) -> Result<R, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
-    let response: RpcResponse<R> = client
+    let response: RpcResponse = client
         .post(rpc_url(url)?)
         .json(&RpcRequest {
             jsonrpc: "2.0",
@@ -166,10 +166,9 @@ async fn rpc_call<P: Serialize, R: DeserializeOwned>(
         .json()
         .await?;
 
-    match (response.result, response.error) {
-        (Some(result), None) => Ok(result),
-        (None, Some(error)) => Err(error.to_string().into()),
-        _ => Err("Malformed JSON-RPC response".into()),
+    match response.error {
+        Some(error) => Err(error.to_string().into()),
+        None => Ok(serde_json::from_value(response.result)?),
     }
 }
 
@@ -182,8 +181,10 @@ struct RpcRequest<'a, P> {
 }
 
 #[derive(Deserialize)]
-struct RpcResponse<R> {
-    result: Option<R>,
+struct RpcResponse {
+    #[serde(default)]
+    result: serde_json::Value,
+    #[serde(default)]
     error: Option<RpcError>,
 }
 

@@ -45,7 +45,14 @@ cd "$ROOT_DIR"
 
 # Start the node in background
 echo "[4/5] Starting omni-node + eth-rpc adapter..."
-polkadot-omni-node --chain "$ROOT_DIR/blockchain/chain_spec.json" --dev --enable-statement-store &
+polkadot-omni-node \
+    --chain "$ROOT_DIR/blockchain/chain_spec.json" \
+    --tmp \
+    --alice \
+    --force-authoring \
+    --unsafe-force-node-key-generation \
+    --rpc-cors all \
+    --enable-statement-store &
 NODE_PID=$!
 
 # Wait for node

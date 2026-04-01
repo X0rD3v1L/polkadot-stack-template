@@ -24,9 +24,16 @@ chain-spec-builder \
 echo "  Chain spec written to blockchain/chain_spec.json"
 
 # Start the node
-echo "[3/3] Starting omni-node in dev mode..."
+echo "[3/3] Starting omni-node..."
 echo "  RPC endpoint: ws://127.0.0.1:9944"
 echo ""
 echo "  For Ethereum RPC + contract deployment, use start-dev-with-contracts.sh instead."
 echo ""
-polkadot-omni-node --chain "$ROOT_DIR/blockchain/chain_spec.json" --dev --enable-statement-store
+polkadot-omni-node \
+    --chain "$ROOT_DIR/blockchain/chain_spec.json" \
+    --tmp \
+    --alice \
+    --force-authoring \
+    --unsafe-force-node-key-generation \
+    --rpc-cors all \
+    --enable-statement-store

@@ -138,6 +138,43 @@ This builds the runtime WASM, generates a chain spec, and starts the node. Endpo
 - **Substrate RPC**: `ws://127.0.0.1:9944`
 - **Ethereum RPC**: `http://127.0.0.1:8545` (requires `eth-rpc --dev` running separately)
 
+The repo's local scripts intentionally avoid `--dev`. On the omni-node release paired with `polkadot-sdk stable2512-3`, Statement Store RPCs are exposed with explicit local-authority flags, but not when using `--dev`.
+
+### Local node flags
+
+The local scripts currently start omni-node with the equivalent of:
+
+```bash
+polkadot-omni-node \
+  --chain blockchain/chain_spec.json \
+  --tmp \
+  --alice \
+  --force-authoring \
+  --unsafe-force-node-key-generation \
+  --rpc-cors all \
+  --enable-statement-store
+```
+
+What each flag is doing:
+
+- `--chain blockchain/chain_spec.json`: run this template's generated chain spec instead of omni-node's built-in `dev` chain
+- `--tmp`: use a temporary base path and delete chain data on shutdown
+- `--alice`: use Alice's dev keys for authoring and signing
+- `--force-authoring`: keep producing blocks even without peers
+- `--unsafe-force-node-key-generation`: allow omni-node to generate a temporary network key for this throwaway local authority
+- `--rpc-cors all`: keep browser-based local tooling working without extra CORS setup
+- `--enable-statement-store`: enable Statement Store networking, validation, and `statement_*` RPC methods
+
+When you might change these later:
+
+- Remove `--tmp` if you want local chain state to persist across restarts.
+- If you remove `--tmp`, also set an explicit `--base-path` so you control where chain data is stored.
+- If you remove `--tmp`, you should also stop relying on `--unsafe-force-node-key-generation` and generate a stable node key instead.
+- Replace `--alice` with another dev account or your own key setup if you do not want Alice authoring blocks.
+- Remove `--force-authoring` if you only want block production when the node is fully participating in a network.
+
+One important caution: this repo's chain spec currently uses the generic chain ID `custom`. If you run multiple local projects that also use `custom` and reuse the same base path, one project can pick up another project's old local database. Using `--tmp` avoids that. If you move to a persistent base path later, either keep it unique per project or give the chain spec a unique `id`.
+
 ### Docker
 
 ```bash
@@ -151,6 +188,8 @@ The Docker image copies [`blockchain/chain_spec.json`](blockchain/chain_spec.jso
 ./scripts/start-dev.sh
 # or run the build + chain-spec-builder steps from INSTALL.md manually
 ```
+
+The Docker setup also avoids `--dev` for the same Statement Store reason. Unlike the localhost scripts, it includes `--rpc-methods=unsafe` because the container exposes RPC externally via `--rpc-external`, and Substrate's default RPC safety policy only auto-allows unsafe RPCs on loopback addresses.
 
 ### Zombienet (multi-node)
 

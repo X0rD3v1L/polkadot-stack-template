@@ -15,10 +15,17 @@ default_command = "polkadot"
 
 [[parachains]]
 id = 1000
-chain = "stack-template-runtime"
+chain = "./chain_spec.json"
 cumulus_based = true
 
-  [parachains.collator]
+  [[parachains.collators]]
   name = "collator-01"
+  validator = true
   command = "polkadot-omni-node"
-  args = ["--dev"]
+  args = ["--enable-statement-store"]
+
+  [[parachains.collators]]
+  name = "collator-02"
+  validator = true
+  command = "polkadot-omni-node"
+  args = ["--enable-statement-store"]

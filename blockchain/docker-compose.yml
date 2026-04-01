@@ -15,10 +15,13 @@ services:
       polkadot-omni-node
       --chain=/chain/chain_spec.json
       --base-path=/data
+      --alice
+      --force-authoring
+      --unsafe-force-node-key-generation
       --rpc-external
       --rpc-cors=all
+      --rpc-methods=unsafe
       --rpc-port=9944
-      --dev
       --enable-statement-store
 
 volumes:
