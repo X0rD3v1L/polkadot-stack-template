@@ -199,7 +199,7 @@ polkadot-stack-template/
 - [PAPI Documentation](https://papi.how/)
 - [Polkadot Faucet](https://faucet.polkadot.io/) (TestNet tokens)
 - [Blockscout Explorer](https://blockscout-testnet.polkadot.io/) (Polkadot TestNet)
-- [Bulletin Chain Authorization](https://paritytech.github.io/polkadot-bulletin-chain/)
+- [Bulletin Chain Authorization](https://paritytech.github.io/polkadot-bulletin-chain/) - On Bulletin Paseo, use `Faucet` -> `Authorize Account` to request a temporary upload allowance for the Substrate account that will sign the upload.
 
 ## License
 

@@ -55,11 +55,15 @@ The Polkadot Bulletin Chain is a system chain that provides on-chain data storag
 - **CID**: CID v1 with raw codec (0x55) and blake2b-256 multihash (0xb220)
 - **Paseo RPC**: `wss://paseo-bulletin-rpc.polkadot.io`
 - **IPFS Gateway**: `https://paseo-ipfs.polkadot.io/ipfs/{cid}`
-- **Authorization**: Required before uploading. Manage authorization at [paritytech.github.io/polkadot-bulletin-chain](https://paritytech.github.io/polkadot-bulletin-chain/)
+- **Authorization**: Required before uploading. On Bulletin Paseo, open [paritytech.github.io/polkadot-bulletin-chain](https://paritytech.github.io/polkadot-bulletin-chain/), go to `Faucet` -> `Authorize Account`, and request the transaction count and byte allowance you need for the Substrate account that will upload the file. The testing faucet grants a temporary allowance using the Alice dev account via sudo.
 - **Data expiry**: ~7 days (100,800 blocks) unless renewed
 - **Max file size**: 8 MiB per transaction
 - **Used for**: Optional IPFS upload of files before claiming their hash on-chain
 - **Source**: [`web/src/hooks/useBulletin.ts`](web/src/hooks/useBulletin.ts), [`cli/src/commands/mod.rs`](cli/src/commands/mod.rs)
+
+Authorization on Bulletin Paseo is temporary. The allowance expires at a block roughly 100,000 blocks in the future, and the same UI exposes `Renew` if you need more time. If upload fails with an authorization error, first check that you authorized the same Substrate address that is signing `TransactionStorage.store()`.
+
+This self-service faucet flow is specific to the current Bulletin Paseo/testing setup. Other Bulletin deployments may use a different authorization process.
 
 ### Upload flow
 

@@ -163,8 +163,17 @@ zombienet spawn blockchain/zombienet.toml
 Both the frontend and CLI support optional file upload to the Polkadot Bulletin Chain, which makes files available via IPFS.
 
 **Prerequisites:**
-- Account must be authorized on the Bulletin Chain: [paritytech.github.io/polkadot-bulletin-chain](https://paritytech.github.io/polkadot-bulletin-chain/)
+- Authorize the Substrate account that will sign the upload on [paritytech.github.io/polkadot-bulletin-chain](https://paritytech.github.io/polkadot-bulletin-chain/)
 - Bulletin Chain RPC: `wss://paseo-bulletin-rpc.polkadot.io`
+
+**Authorize an account on Bulletin Paseo:**
+1. Open [paritytech.github.io/polkadot-bulletin-chain](https://paritytech.github.io/polkadot-bulletin-chain/) and connect the account you will use for uploads
+2. Go to `Faucet` -> `Authorize Account`
+3. Enter the number of transactions and total bytes you need
+4. Submit the request; the testing faucet grants the allowance using the Alice dev account via sudo
+5. Confirm the account now shows a current authorization and expiry block
+
+The allowance is temporary and usually expires around 100,000 blocks later. Use the site's `Renew` flow if you still need the upload after that window.
 
 **Frontend:**
 1. Toggle "Upload to IPFS (via Bulletin Chain)" in the file drop zone
@@ -187,6 +196,8 @@ The CLI connects to the Bulletin Chain via subxt and submits `TransactionStorage
 For contract commands, `--upload` uses a Substrate signer for the Bulletin Chain and an Ethereum signer for the contract call. If you use a raw Ethereum private key with `--signer`, also pass `--bulletin-signer` explicitly.
 
 **Notes:**
+- The authorized account must match the Substrate signer used for `TransactionStorage.store()`
+- On Bulletin Paseo, authorization is self-service through the site's `Faucet` page; this is a testing flow and may differ on other Bulletin deployments
 - Files expire after ~7 days unless renewed
 - Maximum 8 MiB per file
 - IPFS gateway: `https://paseo-ipfs.polkadot.io/ipfs/{cid}`

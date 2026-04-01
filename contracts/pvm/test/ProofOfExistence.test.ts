@@ -10,6 +10,9 @@ describe("ProofOfExistence (PVM)", function () {
     return { poe, owner, otherAccount };
   }
 
+  // The contract accepts any bytes32 hash. These tests use viem's built-in
+  // keccak256 helper for convenience, while the app/CLI use blake2b-256 so the
+  // same file hash can be shared across the pallet, contracts, and Bulletin flow.
   const testHash = keccak256(toBytes("test document"));
   const testHash2 = keccak256(toBytes("another document"));
 
