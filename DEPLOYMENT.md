@@ -173,7 +173,7 @@ When you might change these later:
 - Replace `--alice` with another dev account or your own key setup if you do not want Alice authoring blocks.
 - Remove `--force-authoring` if you only want block production when the node is fully participating in a network.
 
-One important caution: this repo's chain spec currently uses the generic chain ID `custom`. If you run multiple local projects that also use `custom` and reuse the same base path, one project can pick up another project's old local database. Using `--tmp` avoids that. If you move to a persistent base path later, either keep it unique per project or give the chain spec a unique `id`.
+This repo now generates a repo-specific chain ID instead of the generic `custom` default. That reduces accidental collisions with other local projects. If you move to a persistent base path later, it is still a good idea to keep the base path unique per project.
 
 ### Docker
 

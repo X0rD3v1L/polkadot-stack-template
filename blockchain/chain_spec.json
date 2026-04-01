@@ -107,8 +107,8 @@
       }
     }
   },
-  "id": "custom",
-  "name": "Custom",
+  "id": "polkadot-stack-template",
+  "name": "Polkadot Stack Template",
   "para_id": 1000,
   "properties": {
     "tokenDecimals": 12,

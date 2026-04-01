@@ -36,6 +36,8 @@ cargo build -p stack-template-runtime --release
 echo "[2/7] Generating chain spec..."
 chain-spec-builder \
     -c "$ROOT_DIR/blockchain/chain_spec.json" \
+    --chain-name "Polkadot Stack Template" \
+    --chain-id "polkadot-stack-template" \
     create -t development \
     --relay-chain paseo \
     --para-id 1000 \
