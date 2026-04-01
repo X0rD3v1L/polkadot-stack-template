@@ -50,7 +50,7 @@ cd "$ROOT_DIR"
 
 # Start the node in background
 echo "[4/7] Starting omni-node..."
-polkadot-omni-node --chain "$ROOT_DIR/blockchain/chain_spec.json" --dev &
+polkadot-omni-node --chain "$ROOT_DIR/blockchain/chain_spec.json" --dev --enable-statement-store &
 NODE_PID=$!
 
 echo "  Waiting for node..."

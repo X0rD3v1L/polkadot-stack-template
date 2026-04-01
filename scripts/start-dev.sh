@@ -29,4 +29,4 @@ echo "  RPC endpoint: ws://127.0.0.1:9944"
 echo ""
 echo "  For Ethereum RPC + contract deployment, use start-dev-with-contracts.sh instead."
 echo ""
-polkadot-omni-node --chain "$ROOT_DIR/blockchain/chain_spec.json" --dev
+polkadot-omni-node --chain "$ROOT_DIR/blockchain/chain_spec.json" --dev --enable-statement-store

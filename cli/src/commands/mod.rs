@@ -33,7 +33,10 @@ pub fn resolve_substrate_signer(input: &str) -> Result<Keypair, Box<dyn std::err
                 Ok(keypair)
             } else if input.starts_with("0x") || input.starts_with("0X") {
                 // Treat as hex secret seed
-                let seed_hex = input.strip_prefix("0x").or(input.strip_prefix("0X")).unwrap();
+                let seed_hex = input
+                    .strip_prefix("0x")
+                    .or(input.strip_prefix("0X"))
+                    .unwrap();
                 let seed_bytes = hex::decode(seed_hex)?;
                 if seed_bytes.len() != 32 {
                     return Err("Secret seed must be 32 bytes (64 hex chars)".into());

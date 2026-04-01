@@ -19,6 +19,7 @@ services:
       --rpc-cors=all
       --rpc-port=9944
       --dev
+      --enable-statement-store
 
 volumes:
   chain-data:

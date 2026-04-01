@@ -30,87 +30,90 @@ mod benchmarking;
 
 #[frame::pallet]
 pub mod pallet {
-	use crate::weights::WeightInfo;
-	use frame::prelude::*;
+    use crate::weights::WeightInfo;
+    use frame::prelude::*;
 
-	#[pallet::pallet]
-	pub struct Pallet<T>(_);
+    #[pallet::pallet]
+    pub struct Pallet<T>(_);
 
-	/// Configuration trait for this pallet.
-	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		/// The overarching runtime event type.
-		/// A type representing the weights required by the dispatchables of this pallet.
-		type WeightInfo: WeightInfo;
-	}
+    /// Configuration trait for this pallet.
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        /// The overarching runtime event type.
+        /// A type representing the weights required by the dispatchables of this pallet.
+        type WeightInfo: WeightInfo;
+    }
 
-	/// Storage for proof-of-existence claims.
-	/// Maps a 32-byte hash to the (owner, block_number) that created the claim.
-	#[pallet::storage]
-	pub type Claims<T: Config> =
-		StorageMap<_, Blake2_128Concat, H256, (T::AccountId, BlockNumberFor<T>), OptionQuery>;
+    /// Storage for proof-of-existence claims.
+    /// Maps a 32-byte hash to the (owner, block_number) that created the claim.
+    #[pallet::storage]
+    pub type Claims<T: Config> =
+        StorageMap<_, Blake2_128Concat, H256, (T::AccountId, BlockNumberFor<T>), OptionQuery>;
 
-	/// Events emitted by this pallet.
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		/// A new claim was created.
-		ClaimCreated {
-			/// The account that created the claim.
-			who: T::AccountId,
-			/// The hash that was claimed.
-			hash: H256,
-		},
-		/// A claim was revoked by its owner.
-		ClaimRevoked {
-			/// The account that revoked the claim.
-			who: T::AccountId,
-			/// The hash that was revoked.
-			hash: H256,
-		},
-	}
+    /// Events emitted by this pallet.
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// A new claim was created.
+        ClaimCreated {
+            /// The account that created the claim.
+            who: T::AccountId,
+            /// The hash that was claimed.
+            hash: H256,
+        },
+        /// A claim was revoked by its owner.
+        ClaimRevoked {
+            /// The account that revoked the claim.
+            who: T::AccountId,
+            /// The hash that was revoked.
+            hash: H256,
+        },
+    }
 
-	/// Errors that can occur in this pallet.
-	#[pallet::error]
-	pub enum Error<T> {
-		/// This hash has already been claimed.
-		AlreadyClaimed,
-		/// The caller is not the owner of this claim.
-		NotClaimOwner,
-		/// No claim exists for this hash.
-		ClaimNotFound,
-	}
+    /// Errors that can occur in this pallet.
+    #[pallet::error]
+    pub enum Error<T> {
+        /// This hash has already been claimed.
+        AlreadyClaimed,
+        /// The caller is not the owner of this claim.
+        NotClaimOwner,
+        /// No claim exists for this hash.
+        ClaimNotFound,
+    }
 
-	/// Dispatchable calls.
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-		/// Create a new proof-of-existence claim for the given hash.
-		///
-		/// The hash must not already be claimed. The caller becomes the owner,
-		/// and the current block number is recorded.
-		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::create_claim())]
-		pub fn create_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			ensure!(!Claims::<T>::contains_key(&hash), Error::<T>::AlreadyClaimed);
-			let block_number = frame_system::Pallet::<T>::block_number();
-			Claims::<T>::insert(&hash, (&who, block_number));
-			Self::deposit_event(Event::ClaimCreated { who, hash });
-			Ok(())
-		}
+    /// Dispatchable calls.
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        /// Create a new proof-of-existence claim for the given hash.
+        ///
+        /// The hash must not already be claimed. The caller becomes the owner,
+        /// and the current block number is recorded.
+        #[pallet::call_index(0)]
+        #[pallet::weight(T::WeightInfo::create_claim())]
+        pub fn create_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                !Claims::<T>::contains_key(&hash),
+                Error::<T>::AlreadyClaimed
+            );
+            let block_number = frame_system::Pallet::<T>::block_number();
+            Claims::<T>::insert(&hash, (&who, block_number));
+            Self::deposit_event(Event::ClaimCreated { who, hash });
+            Ok(())
+        }
 
-		/// Revoke an existing proof-of-existence claim.
-		///
-		/// Only the original claim owner can revoke it. The storage entry is removed.
-		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::revoke_claim())]
-		pub fn revoke_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			let (owner, _) = Claims::<T>::get(&hash).ok_or(Error::<T>::ClaimNotFound)?;
-			ensure!(owner == who, Error::<T>::NotClaimOwner);
-			Claims::<T>::remove(&hash);
-			Self::deposit_event(Event::ClaimRevoked { who, hash });
-			Ok(())
-		}
-	}
+        /// Revoke an existing proof-of-existence claim.
+        ///
+        /// Only the original claim owner can revoke it. The storage entry is removed.
+        #[pallet::call_index(1)]
+        #[pallet::weight(T::WeightInfo::revoke_claim())]
+        pub fn revoke_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let (owner, _) = Claims::<T>::get(&hash).ok_or(Error::<T>::ClaimNotFound)?;
+            ensure!(owner == who, Error::<T>::NotClaimOwner);
+            Claims::<T>::remove(&hash);
+            Self::deposit_event(Event::ClaimRevoked { who, hash });
+            Ok(())
+        }
+    }
 }

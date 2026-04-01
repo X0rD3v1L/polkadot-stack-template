@@ -21,7 +21,7 @@ A Cumulus-based parachain runtime built on **polkadot-sdk stable2512** with smar
 - **Source**: [`blockchain/runtime/`](blockchain/runtime/)
 - **Pallets included**: System, Balances, Aura, Session, Sudo, XCM, pallet-revive, TemplatePallet
 - **pallet-revive**: Enables both EVM and PVM smart contract execution with Ethereum RPC compatibility
-- **Runs locally** via `polkadot-omni-node --dev`
+- **Runs locally** via `polkadot-omni-node --dev --enable-statement-store`
 
 ### Solidity Smart Contracts
 
@@ -55,7 +55,7 @@ A Rust CLI tool using [subxt](https://github.com/parity-tech/subxt) and [alloy](
 - **Source**: [`cli/`](cli/)
 - **Pallet commands**: `pallet create-claim [hash | --file path] [--upload] [-s signer]`, `revoke-claim`, `get-claim`, `list-claims`
 - **Contract commands**: `contract create-claim <evm|pvm> [hash | --file path] [--upload] [-s signer] [--bulletin-signer signer]`, `revoke-claim`, `get-claim`, `info`
-- **Chain commands**: `chain info`, `chain blocks`
+- **Chain commands**: `chain info`, `chain blocks`, `chain statement-submit --file <path> [--signer alice] [--unsigned]`, `chain statement-dump`
 - **Signers**: Pallet commands accept dev names, mnemonic phrases, or 0x secret seeds. Contract commands accept dev names or 0x Ethereum private keys.
 - **Bulletin Chain**: `--upload` flag uploads files to IPFS via `TransactionStorage.store()`. When using a raw Ethereum private key for contract calls, also pass `--bulletin-signer` for the Substrate-side upload.
 
@@ -111,7 +111,11 @@ Or run components individually:
 cargo run -p stack-cli -- chain info
 cargo run -p stack-cli -- pallet create-claim --file ./README.md
 cargo run -p stack-cli -- pallet list-claims
+cargo run -p stack-cli -- chain statement-submit --file ./README.md --signer alice
+cargo run -p stack-cli -- chain statement-dump
 ```
+
+The local dev scripts start `polkadot-omni-node` with Statement Store enabled by default, so omni-node's `statement_*` RPC methods are available on the same RPC port (`9944`).
 
 The frontend keeps `deployments.json` and `web/src/config/deployments.ts` as checked-in stubs. Deploy scripts update both files automatically after a successful contract deployment.
 
@@ -137,6 +141,10 @@ cargo test -p pallet-template
 
 # All tests including benchmarks
 SKIP_PALLET_REVIVE_FIXTURES=1 cargo test --workspace --features runtime-benchmarks
+
+# Statement Store runtime + CLI smoke harness
+cargo test -p stack-template-runtime
+cargo test -p stack-cli
 
 # Solidity tests (local Hardhat network)
 cd contracts/evm && npx hardhat test

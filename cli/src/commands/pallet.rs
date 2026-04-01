@@ -147,12 +147,7 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
                 "Claims",
                 Vec::<subxt::dynamic::Value>::new(),
             );
-            let mut results = api
-                .storage()
-                .at_latest()
-                .await?
-                .iter(storage_query)
-                .await?;
+            let mut results = api.storage().at_latest().await?.iter(storage_query).await?;
 
             println!("{:<68} {:<50} {}", "HASH", "OWNER", "BLOCK");
             println!("{}", "-".repeat(130));

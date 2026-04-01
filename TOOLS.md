@@ -20,6 +20,18 @@ The foundation for the entire blockchain layer. Polkadot SDK provides FRAME (the
 
 The runtime includes core pallets (System, Balances, Aura, Session, Sudo, XCM) plus `pallet-revive` for smart contracts and the custom `TemplatePallet` for proof of existence.
 
+## Statement Store
+
+Statement Store is an omni-node feature for validating, storing, and gossiping signed statements over the network using a runtime-provided `validate_statement` API.
+
+- **Used for**: Short-lived off-chain statement storage and propagation
+- **Runtime pieces**: `pallet-statement` + `sp-statement-store` runtime API
+- **Node flag**: `--enable-statement-store`
+- **RPC methods**: `statement_submit`, `statement_dump`, plus the topic/key query variants
+- **Local status in this template**: Enabled by default in the repo's local omni-node scripts
+
+The current template integration is intentionally generic. It enables the runtime and node plumbing without yet wiring Statement Store into the Proof of Existence pallet, the frontend, or Bulletin upload flows.
+
 ## pallet-revive (EVM + PVM)
 
 Enables both EVM and PolkaVM smart contract execution on the parachain. Contracts written in Solidity can be compiled to either target and deployed through the same Ethereum-compatible JSON-RPC interface.
