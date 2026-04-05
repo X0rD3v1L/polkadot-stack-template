@@ -13,6 +13,8 @@ import {
   uploadToBulletin,
   checkBulletinAuthorization,
 } from "../hooks/useBulletin";
+import { submitToStatementStore } from "../hooks/useStatementStore";
+import { getDevKeypair } from "../hooks/useAccount";
 import { useChainStore } from "../store/chainStore";
 
 interface Props {
@@ -50,13 +52,17 @@ export default function ContractProofOfExistencePage({
   defaultAddress,
 }: Props) {
   const colors = colorMap[accentColor];
-  const ethRpcUrl = useChainStore((s) => s.ethRpcUrl);
+  const { ethRpcUrl, wsUrl } = useChainStore((s) => ({
+    ethRpcUrl: s.ethRpcUrl,
+    wsUrl: s.wsUrl,
+  }));
   const scopedStorageKey = `${storageKey}:${ethRpcUrl}`;
   const [contractAddress, setContractAddress] = useState("");
   const [selectedAccount, setSelectedAccount] = useState(0);
   const [fileHash, setFileHash] = useState<`0x${string}` | null>(null);
   const [fileBytes, setFileBytes] = useState<Uint8Array | null>(null);
   const [uploadToIpfs, setUploadToIpfs] = useState(false);
+  const [uploadToStatementStore, setUploadToStatementStore] = useState(false);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [txStatus, setTxStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -188,7 +194,17 @@ export default function ContractProofOfExistencePage({
         setTxStatus("Uploading to Bulletin Chain (IPFS)...");
         await uploadToBulletin(fileBytes, substrateSigner);
         setTxStatus("Upload complete. Submitting claim...");
-      } else {
+      }
+
+      // Optional: submit to Statement Store
+      if (uploadToStatementStore && fileBytes) {
+        setTxStatus("Submitting to Statement Store...");
+        const keypair = getDevKeypair(selectedAccount);
+        await submitToStatementStore(wsUrl, fileBytes, keypair.publicKey, keypair.sign);
+        setTxStatus("Statement Store submission complete. Submitting claim...");
+      }
+
+      if (!uploadToIpfs && !uploadToStatementStore) {
         setTxStatus("Submitting createClaim...");
       }
 
@@ -294,6 +310,9 @@ export default function ContractProofOfExistencePage({
           showUploadToggle={true}
           uploadToIpfs={uploadToIpfs}
           onUploadToggle={setUploadToIpfs}
+          showStatementStoreToggle={true}
+          uploadToStatementStore={uploadToStatementStore}
+          onStatementStoreToggle={setUploadToStatementStore}
         />
 
         {fileHash && (

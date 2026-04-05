@@ -35,6 +35,8 @@ enum Commands {
         #[command(subcommand)]
         action: commands::contract::ContractAction,
     },
+    /// All-in-one: hash a file, create a claim, and optionally upload to Bulletin Chain / Statement Store
+    Prove(commands::prove::ProveArgs),
 }
 
 #[tokio::main]
@@ -44,7 +46,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match cli.command {
         Commands::Chain { action } => commands::chain::run(action, &cli.url).await?,
         Commands::Pallet { action } => commands::pallet::run(action, &cli.url).await?,
-        Commands::Contract { action } => commands::contract::run(action, &cli.eth_rpc_url).await?,
+        Commands::Contract { action } => {
+            commands::contract::run(action, &cli.eth_rpc_url, &cli.url).await?
+        }
+        Commands::Prove(args) => {
+            commands::prove::run(args, &cli.url, &cli.eth_rpc_url).await?
+        }
     }
 
     Ok(())

@@ -1,7 +1,6 @@
+use crate::commands::{rpc_call, resolve_statement_signer, submit_to_statement_store};
 use clap::Subcommand;
-use codec::{Decode, Encode};
-use reqwest::Url;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use codec::Decode;
 use sp_core::Pair;
 use sp_statement_store::Statement;
 use subxt::{OnlineClient, PolkadotConfig};
@@ -55,25 +54,22 @@ pub async fn run(action: ChainAction, url: &str) -> Result<(), Box<dyn std::erro
             unsigned,
         } => {
             let bytes = std::fs::read(&file)?;
-            let mut statement = Statement::new();
-            statement.set_plain_data(bytes);
 
-            if !unsigned {
-                let signer = resolve_statement_signer(&signer)?;
-                statement.sign_sr25519_private(&signer);
-                println!("Using signer: 0x{}", hex::encode(signer.public()));
-            } else {
+            if unsigned {
+                use codec::Encode;
                 println!("Submitting an unsigned statement to test runtime rejection...");
+                let mut statement = Statement::new();
+                statement.set_plain_data(bytes);
+                let encoded = format!("0x{}", hex::encode(statement.encode()));
+                let statement_hash = format!("0x{}", hex::encode(statement.hash()));
+                rpc_call::<_, ()>(url, "statement_submit", vec![encoded]).await?;
+                println!("Statement submitted successfully.");
+                println!("Hash: {statement_hash}");
+            } else {
+                let signer = resolve_statement_signer(&signer)?;
+                println!("Using signer: 0x{}", hex::encode(signer.public()));
+                submit_to_statement_store(url, &bytes, &signer).await?;
             }
-
-            let encoded = format!("0x{}", hex::encode(statement.encode()));
-            let statement_hash = format!("0x{}", hex::encode(statement.hash()));
-
-            rpc_call::<_, ()>(url, "statement_submit", vec![encoded]).await?;
-
-            println!("Statement submitted successfully.");
-            println!("Hash: {statement_hash}");
-            println!("Data bytes: {}", statement.data_len());
         }
         ChainAction::StatementDump => {
             let encoded_statements: Vec<String> =
@@ -114,95 +110,3 @@ fn topic_count(statement: &Statement) -> usize {
         .take_while(|index| statement.topic(*index).is_some())
         .count()
 }
-
-fn resolve_statement_signer(
-    input: &str,
-) -> Result<sp_core::sr25519::Pair, Box<dyn std::error::Error>> {
-    let uri = match input.to_lowercase().as_str() {
-        "alice" => "//Alice",
-        "bob" => "//Bob",
-        "charlie" => "//Charlie",
-        "dave" => "//Dave",
-        "eve" => "//Eve",
-        "ferdie" => "//Ferdie",
-        _ => input,
-    };
-
-    sp_core::sr25519::Pair::from_string(uri, None)
-        .map_err(|error| format!("Could not resolve statement signer {input}: {error}").into())
-}
-
-fn rpc_url(url: &str) -> Result<Url, Box<dyn std::error::Error>> {
-    let mut rpc_url = Url::parse(url)?;
-    match rpc_url.scheme() {
-        "ws" => rpc_url
-            .set_scheme("http")
-            .expect("valid URL scheme conversion"),
-        "wss" => rpc_url
-            .set_scheme("https")
-            .expect("valid URL scheme conversion"),
-        "http" | "https" => {}
-        scheme => return Err(format!("Unsupported RPC URL scheme: {scheme}").into()),
-    }
-    Ok(rpc_url)
-}
-
-async fn rpc_call<P: Serialize, R: DeserializeOwned>(
-    url: &str,
-    method: &str,
-    params: P,
-) -> Result<R, Box<dyn std::error::Error>> {
-    let client = reqwest::Client::new();
-    let response: RpcResponse = client
-        .post(rpc_url(url)?)
-        .json(&RpcRequest {
-            jsonrpc: "2.0",
-            id: 1u32,
-            method,
-            params,
-        })
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    match response.error {
-        Some(error) => Err(error.to_string().into()),
-        None => Ok(serde_json::from_value(response.result)?),
-    }
-}
-
-#[derive(Serialize)]
-struct RpcRequest<'a, P> {
-    jsonrpc: &'static str,
-    id: u32,
-    method: &'a str,
-    params: P,
-}
-
-#[derive(Deserialize)]
-struct RpcResponse {
-    #[serde(default)]
-    result: serde_json::Value,
-    #[serde(default)]
-    error: Option<RpcError>,
-}
-
-#[derive(Debug, Deserialize)]
-struct RpcError {
-    code: i32,
-    message: String,
-    #[serde(default)]
-    data: Option<serde_json::Value>,
-}
-
-impl std::fmt::Display for RpcError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.data {
-            Some(data) => write!(f, "JSON-RPC error {}: {} ({data})", self.code, self.message),
-            None => write!(f, "JSON-RPC error {}: {}", self.code, self.message),
-        }
-    }
-}
-
-impl std::error::Error for RpcError {}

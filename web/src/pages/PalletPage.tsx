@@ -10,6 +10,8 @@ import {
   uploadToBulletin,
   checkBulletinAuthorization,
 } from "../hooks/useBulletin";
+import { submitToStatementStore } from "../hooks/useStatementStore";
+import { getDevKeypair } from "../hooks/useAccount";
 
 interface Claim {
   hash: string;
@@ -33,6 +35,7 @@ export default function PalletPage() {
   const [fileHash, setFileHash] = useState<`0x${string}` | null>(null);
   const [fileBytes, setFileBytes] = useState<Uint8Array | null>(null);
   const [uploadToIpfs, setUploadToIpfs] = useState(false);
+  const [uploadToStatementStore, setUploadToStatementStore] = useState(false);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(false);
   const [ipfsAvailable, setIpfsAvailable] = useState<Record<string, boolean>>({});
@@ -102,7 +105,17 @@ export default function PalletPage() {
         setTxStatus("Uploading to Bulletin Chain (IPFS)...");
         await uploadToBulletin(fileBytes, account.signer);
         setTxStatus("Upload complete. Submitting claim...");
-      } else {
+      }
+
+      // Optional: submit to Statement Store
+      if (uploadToStatementStore && fileBytes) {
+        setTxStatus("Submitting to Statement Store...");
+        const keypair = getDevKeypair(selectedAccount);
+        await submitToStatementStore(wsUrl, fileBytes, keypair.publicKey, keypair.sign);
+        setTxStatus("Statement Store submission complete. Submitting claim...");
+      }
+
+      if (!uploadToIpfs && !uploadToStatementStore) {
         setTxStatus("Submitting create_claim...");
       }
 
@@ -179,6 +192,9 @@ export default function PalletPage() {
           showUploadToggle={true}
           uploadToIpfs={uploadToIpfs}
           onUploadToggle={setUploadToIpfs}
+          showStatementStoreToggle={true}
+          uploadToStatementStore={uploadToStatementStore}
+          onStatementStoreToggle={setUploadToStatementStore}
         />
 
         {fileHash && (

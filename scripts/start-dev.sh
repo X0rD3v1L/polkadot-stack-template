@@ -15,9 +15,10 @@ cargo build -p stack-template-runtime --release
 echo "[2/3] Generating chain spec..."
 chain-spec-builder \
     -c "$ROOT_DIR/blockchain/chain_spec.json" \
+    create \
     --chain-name "Polkadot Stack Template" \
     --chain-id "polkadot-stack-template" \
-    create -t development \
+    -t development \
     --relay-chain paseo \
     --para-id 1000 \
     --runtime "$ROOT_DIR/target/release/wbuild/stack-template-runtime/stack_template_runtime.compact.compressed.wasm" \

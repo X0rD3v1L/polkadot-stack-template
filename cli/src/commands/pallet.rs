@@ -1,4 +1,4 @@
-use crate::commands::{hash_input, resolve_substrate_signer};
+use crate::commands::{hash_input, resolve_statement_signer, resolve_substrate_signer};
 use clap::Subcommand;
 use subxt::utils::AccountId32;
 use subxt::OnlineClient;
@@ -17,6 +17,9 @@ pub enum PalletAction {
         /// Also upload the file to the Bulletin Chain (IPFS)
         #[arg(long, requires = "file")]
         upload: bool,
+        /// Also submit the file to the Statement Store
+        #[arg(long, requires = "file")]
+        statement_store: bool,
         /// Signer: dev name (alice/bob/charlie), mnemonic, or 0x secret seed
         #[arg(long, short, default_value = "alice")]
         signer: String,
@@ -71,6 +74,7 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
             hash,
             file,
             upload,
+            statement_store,
             signer,
         } => {
             let (hash_hex, file_bytes) = hash_input(hash, file.as_deref())?;
@@ -78,8 +82,14 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
             let keypair = resolve_substrate_signer(&signer)?;
 
             if upload {
-                let bytes = file_bytes.ok_or("--upload requires --file")?;
-                crate::commands::upload_to_bulletin(&bytes, &keypair).await?;
+                let bytes = file_bytes.as_ref().ok_or("--upload requires --file")?;
+                crate::commands::upload_to_bulletin(bytes, &keypair).await?;
+            }
+
+            if statement_store {
+                let bytes = file_bytes.as_ref().ok_or("--statement-store requires --file")?;
+                let statement_signer = resolve_statement_signer(&signer)?;
+                crate::commands::submit_to_statement_store(url, bytes, &statement_signer).await?;
             }
 
             let tx = subxt::dynamic::tx(
