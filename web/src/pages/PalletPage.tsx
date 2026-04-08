@@ -7,7 +7,7 @@ import { Binary } from "polkadot-api";
 import FileDropZone from "../components/FileDropZone";
 import { hexHashToCid, ipfsUrl, checkIpfsAvailable } from "../utils/cid";
 import { uploadToBulletin, checkBulletinAuthorization } from "../hooks/useBulletin";
-import { submitToStatementStore } from "../hooks/useStatementStore";
+import { submitToStatementStore, checkStatementStoreAvailable } from "../hooks/useStatementStore";
 import { getDevKeypair } from "../hooks/useAccount";
 
 interface Claim {
@@ -38,12 +38,17 @@ export default function PalletPage() {
 	const [claims, setClaims] = useState<Claim[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [ipfsAvailable, setIpfsAvailable] = useState<Record<string, boolean>>({});
+	const [statementStoreAvailable, setStatementStoreAvailable] = useState<boolean | null>(null);
 
 	const account = devAccounts[selectedAccount];
 
 	useEffect(() => {
 		loadClaims();
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+	useEffect(() => {
+		checkStatementStoreAvailable(wsUrl).then(setStatementStoreAvailable);
+	}, [wsUrl]);
 
 	function getApi() {
 		const client = getClient(wsUrl);
@@ -190,6 +195,7 @@ export default function PalletPage() {
 					showStatementStoreToggle={true}
 					uploadToStatementStore={uploadToStatementStore}
 					onStatementStoreToggle={setUploadToStatementStore}
+					statementStoreDisabled={statementStoreAvailable === false}
 				/>
 
 				{fileHash && (
