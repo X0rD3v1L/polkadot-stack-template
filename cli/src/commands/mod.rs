@@ -17,6 +17,7 @@ use subxt::{OnlineClient, PolkadotConfig};
 use subxt_signer::sr25519::{dev, Keypair};
 
 type Blake2b256 = Blake2b<U32>;
+type HashResult = Result<(String, Option<Vec<u8>>), Box<dyn std::error::Error>>;
 
 const BULLETIN_WS: &str = "wss://paseo-bulletin-rpc.polkadot.io";
 // Matches the node-side statement store propagation limit.
@@ -88,7 +89,7 @@ pub fn resolve_statement_signer(
 pub fn hash_input(
 	hash: Option<String>,
 	file: Option<&str>,
-) -> Result<(String, Option<Vec<u8>>), Box<dyn std::error::Error>> {
+) -> HashResult {
 	match (hash, file) {
 		(Some(h), _) => Ok((h, None)),
 		(None, Some(path)) => {

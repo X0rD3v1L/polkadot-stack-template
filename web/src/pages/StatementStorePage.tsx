@@ -71,8 +71,14 @@ export default function StatementStorePage() {
 		// WebP: RIFF....WEBP
 		if (
 			data.length >= 12 &&
-			data[0] === 0x52 && data[1] === 0x49 && data[2] === 0x46 && data[3] === 0x46 &&
-			data[8] === 0x57 && data[9] === 0x45 && data[10] === 0x42 && data[11] === 0x50
+			data[0] === 0x52 &&
+			data[1] === 0x49 &&
+			data[2] === 0x46 &&
+			data[3] === 0x46 &&
+			data[8] === 0x57 &&
+			data[9] === 0x45 &&
+			data[10] === 0x42 &&
+			data[11] === 0x50
 		)
 			return { ext: "webp", mime: "image/webp" };
 
@@ -84,7 +90,9 @@ export default function StatementStorePage() {
 				try {
 					JSON.parse(trimmed);
 					return { ext: "json", mime: "application/json" };
-				} catch { /* not valid JSON */ }
+				} catch {
+					/* not valid JSON */
+				}
 			}
 			return { ext: "txt", mime: "text/plain" };
 		}
@@ -119,18 +127,17 @@ export default function StatementStorePage() {
 				<p className="text-gray-400">
 					View statements stored in the node's local Statement Store.
 				</p>
-					<div className="bg-gray-900 rounded-lg p-5 border border-gray-800">
-						<p className="text-gray-500 text-sm">
-							The connected node does not expose Statement Store RPCs. In
-							polkadot-sdk stable2512-3, the statement store is only available in
-							the relay-backed path. Use{" "}
-							<code className="text-gray-400">./scripts/start-all.sh</code> to
-							start the full environment, or{" "}
-							<code className="text-gray-400">./scripts/start-local.sh</code> for
-							just the relay-backed network.
-						</p>
-					</div>
+				<div className="bg-gray-900 rounded-lg p-5 border border-gray-800">
+					<p className="text-gray-500 text-sm">
+						The connected node does not expose Statement Store RPCs. In polkadot-sdk
+						stable2512-3, the statement store is only available in the relay-backed
+						path. Use <code className="text-gray-400">./scripts/start-all.sh</code> to
+						start the full environment, or{" "}
+						<code className="text-gray-400">./scripts/start-local.sh</code> for just the
+						relay-backed network.
+					</p>
 				</div>
+			</div>
 		);
 	}
 
@@ -138,8 +145,8 @@ export default function StatementStorePage() {
 		<div className="space-y-6">
 			<h1 className="text-2xl font-bold text-orange-400">Statement Store</h1>
 			<p className="text-gray-400">
-				View statements stored in the node's local Statement Store. Statements are
-				off-chain data propagated across the peer-to-peer network.
+				View statements stored in the node's local Statement Store. Statements are off-chain
+				data propagated across the peer-to-peer network.
 			</p>
 
 			<div className="bg-gray-900 rounded-lg p-5 border border-gray-800 space-y-4">
@@ -169,10 +176,7 @@ export default function StatementStorePage() {
 					{statements.map((stmt, i) => {
 						const textPreview = tryDecodeUtf8(stmt.data);
 						return (
-							<div
-								key={i}
-								className="bg-gray-800 rounded p-3 text-sm space-y-1"
-							>
+							<div key={i} className="bg-gray-800 rounded p-3 text-sm space-y-1">
 								<p className="font-mono text-xs text-gray-300 break-all">
 									{stmt.hash}
 								</p>
@@ -180,9 +184,7 @@ export default function StatementStorePage() {
 									{stmt.proofType && (
 										<>
 											Proof:{" "}
-											<span className="text-gray-300">
-												{stmt.proofType}
-											</span>{" "}
+											<span className="text-gray-300">{stmt.proofType}</span>{" "}
 											|{" "}
 										</>
 									)}
@@ -213,9 +215,7 @@ export default function StatementStorePage() {
 										<>
 											{" "}
 											| Priority:{" "}
-											<span className="text-gray-300">
-												{stmt.priority}
-											</span>
+											<span className="text-gray-300">{stmt.priority}</span>
 										</>
 									)}
 								</p>

@@ -123,7 +123,7 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
 			let result = api.storage().at_latest().await?.fetch(&storage_query).await?;
 			match result {
 				Some(value) => {
-					let (owner, block) = decode_claim(&value.encoded());
+					let (owner, block) = decode_claim(value.encoded());
 					println!("Claim found:");
 					println!("  Hash:  {hash}");
 					println!("  Owner: {owner}");
@@ -140,14 +140,14 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
 			);
 			let mut results = api.storage().at_latest().await?.iter(storage_query).await?;
 
-			println!("{:<68} {:<50} {}", "HASH", "OWNER", "BLOCK");
+			println!("{:<68} {:<50} BLOCK", "HASH", "OWNER");
 			println!("{}", "-".repeat(130));
 
 			let mut count = 0u32;
 			while let Some(Ok(kv)) = results.next().await {
 				let key_len = kv.key_bytes.len();
 				let hash = format!("0x{}", hex::encode(&kv.key_bytes[key_len - 32..]));
-				let (owner, block) = decode_claim(&kv.value.encoded());
+				let (owner, block) = decode_claim(kv.value.encoded());
 
 				println!("{:<68} {:<50} {}", hash, owner, block);
 				count += 1;

@@ -80,7 +80,7 @@ fn eth_dev_accounts() -> Vec<AccountId> {
 		hex_literal::hex!("798d4ba9baf0064ec19eb4f0a1a45785ae9d6dfceeeeeeeeeeeeeeeeeeeeeeee"),
 	]
 	.into_iter()
-	.map(|bytes| AccountId32::from(bytes))
+	.map(AccountId32::from)
 	.collect()
 }
 

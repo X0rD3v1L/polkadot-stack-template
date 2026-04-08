@@ -92,9 +92,9 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_claim())]
 		pub fn create_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			ensure!(!Claims::<T>::contains_key(&hash), Error::<T>::AlreadyClaimed);
+			ensure!(!Claims::<T>::contains_key(hash), Error::<T>::AlreadyClaimed);
 			let block_number = frame_system::Pallet::<T>::block_number();
-			Claims::<T>::insert(&hash, (&who, block_number));
+			Claims::<T>::insert(hash, (&who, block_number));
 			Self::deposit_event(Event::ClaimCreated { who, hash });
 			Ok(())
 		}
@@ -106,9 +106,9 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::revoke_claim())]
 		pub fn revoke_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let (owner, _) = Claims::<T>::get(&hash).ok_or(Error::<T>::ClaimNotFound)?;
+			let (owner, _) = Claims::<T>::get(hash).ok_or(Error::<T>::ClaimNotFound)?;
 			ensure!(owner == who, Error::<T>::NotClaimOwner);
-			Claims::<T>::remove(&hash);
+			Claims::<T>::remove(hash);
 			Self::deposit_event(Event::ClaimRevoked { who, hash });
 			Ok(())
 		}
