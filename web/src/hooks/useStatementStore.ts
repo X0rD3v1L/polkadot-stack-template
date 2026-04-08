@@ -72,6 +72,30 @@ function wsToHttp(wsUrl: string): string {
 }
 
 /**
+ * Check if the node exposes the statement_submit RPC method.
+ */
+export async function checkStatementStoreAvailable(wsUrl: string): Promise<boolean> {
+	const httpUrl = wsToHttp(wsUrl);
+	try {
+		const response = await fetch(httpUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				jsonrpc: "2.0",
+				id: 1,
+				method: "rpc_methods",
+				params: [],
+			}),
+		});
+		const result = await response.json();
+		const methods: string[] = result?.result?.methods ?? [];
+		return methods.includes("statement_submit");
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Submit file bytes to the local node's Statement Store.
  *
  * Builds a canonical SCALE-encoded sp_statement_store::Statement and

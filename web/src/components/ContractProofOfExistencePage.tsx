@@ -10,7 +10,7 @@ import { devAccounts } from "../hooks/useAccount";
 import FileDropZone from "./FileDropZone";
 import { hexHashToCid, ipfsUrl, checkIpfsAvailable } from "../utils/cid";
 import { uploadToBulletin, checkBulletinAuthorization } from "../hooks/useBulletin";
-import { submitToStatementStore } from "../hooks/useStatementStore";
+import { submitToStatementStore, checkStatementStoreAvailable } from "../hooks/useStatementStore";
 import { getDevKeypair } from "../hooks/useAccount";
 import { useChainStore } from "../store/chainStore";
 
@@ -62,10 +62,15 @@ export default function ContractProofOfExistencePage({
 	const [txStatus, setTxStatus] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [ipfsAvailable, setIpfsAvailable] = useState<Record<string, boolean>>({});
+	const [statementStoreAvailable, setStatementStoreAvailable] = useState<boolean | null>(null);
 
 	useEffect(() => {
 		setContractAddress(localStorage.getItem(scopedStorageKey) || defaultAddress || "");
 	}, [defaultAddress, scopedStorageKey]);
+
+	useEffect(() => {
+		checkStatementStoreAvailable(wsUrl).then(setStatementStoreAvailable);
+	}, [wsUrl]);
 
 	useEffect(() => {
 		if (contractAddress) {
@@ -304,6 +309,7 @@ export default function ContractProofOfExistencePage({
 					showStatementStoreToggle={true}
 					uploadToStatementStore={uploadToStatementStore}
 					onStatementStoreToggle={setUploadToStatementStore}
+					statementStoreDisabled={statementStoreAvailable === false}
 				/>
 
 				{fileHash && (

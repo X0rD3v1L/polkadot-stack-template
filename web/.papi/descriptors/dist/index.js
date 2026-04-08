@@ -182,7 +182,7 @@ var extensions = {};
 var getMetadata = () => Promise.resolve().then(() => (init_stack_template_metadata(), stack_template_metadata_exports)).then(
   (module2) => toBinary("default" in module2 ? module2.default : module2)
 );
-var genesis = "0x4545454545454545454545454545454545454545454545454545454545454545";
+var genesis = "0x223e1cf151a057e4d59bbe9da7bab3fdd5fa8cc90983a7d14fca0cb7b10f03e0";
 var _allDescriptors = { descriptors: descriptorValues, metadataTypes, asset, extensions, getMetadata, genesis };
 var stack_template_default = _allDescriptors;
 
@@ -254,7 +254,7 @@ var XcmVersionedAsset = import_polkadot_api._Enum;
 
 // .papi/descriptors/src/index.ts
 var metadatas = {
-  ["0xa1c547ed23c17782c5c9eba26018e8c1e8a28b3035e3772ec2cbff8a342b6bb0"]: stack_template_default,
+  ["0x29334ab9d42eff3e8115739d186e6c070799332ae0d2ed42abcddd02f37ea970"]: stack_template_default,
   ["0x1a82e5143be3211ded412b0368b486ce83bd41a80ec95eb267f6c204adda8365"]: bulletin_default
 };
 var getMetadata3 = async (codeHash) => {
