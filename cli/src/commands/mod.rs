@@ -17,6 +17,8 @@ use subxt_signer::sr25519::{dev, Keypair};
 type Blake2b256 = Blake2b<U32>;
 
 const BULLETIN_WS: &str = "wss://paseo-bulletin-rpc.polkadot.io";
+// Matches the node-side statement store propagation limit.
+const MAX_STATEMENT_STORE_ENCODED_SIZE: usize = 1024 * 1024 - 1;
 
 /// Resolve a signer from a flexible input:
 /// - Named dev account: "alice", "bob", "charlie"
@@ -159,11 +161,13 @@ pub async fn submit_to_statement_store(
     file_bytes: &[u8],
     signer: &sp_core::sr25519::Pair,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Submitting {} bytes to Statement Store...", file_bytes.len());
+    println!(
+        "Submitting {} bytes to Statement Store...",
+        file_bytes.len()
+    );
 
-    let mut statement = Statement::new();
-    statement.set_plain_data(file_bytes.to_vec());
-    statement.sign_sr25519_private(signer);
+    let statement = build_signed_statement(file_bytes, signer);
+    ensure_statement_store_size(&statement)?;
 
     let encoded = format!("0x{}", hex::encode(statement.encode()));
     let statement_hash = format!("0x{}", hex::encode(statement.hash()));
@@ -173,6 +177,26 @@ pub async fn submit_to_statement_store(
     println!("Statement submitted to store.");
     println!("Statement hash: {statement_hash}");
     println!("Data bytes: {}", statement.data_len());
+
+    Ok(())
+}
+
+fn build_signed_statement(file_bytes: &[u8], signer: &sp_core::sr25519::Pair) -> Statement {
+    let mut statement = Statement::new();
+    statement.set_plain_data(file_bytes.to_vec());
+    statement.sign_sr25519_private(signer);
+    statement
+}
+
+fn ensure_statement_store_size(statement: &Statement) -> Result<(), Box<dyn std::error::Error>> {
+    let encoded_size = statement.encoded_size();
+    if encoded_size > MAX_STATEMENT_STORE_ENCODED_SIZE {
+        return Err(format!(
+            "Statement is too large for node propagation ({encoded_size} encoded bytes, max {}). Choose a smaller file.",
+            MAX_STATEMENT_STORE_ENCODED_SIZE
+        )
+        .into());
+    }
 
     Ok(())
 }
@@ -253,3 +277,28 @@ impl std::fmt::Display for RpcError {
 }
 
 impl std::error::Error for RpcError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn small_statement_is_allowed() {
+        let signer = sp_core::sr25519::Pair::from_string("//Alice", None).unwrap();
+        let statement = build_signed_statement(b"hello world", &signer);
+
+        assert!(ensure_statement_store_size(&statement).is_ok());
+    }
+
+    #[test]
+    fn oversized_statement_is_rejected_before_rpc() {
+        let signer = sp_core::sr25519::Pair::from_string("//Alice", None).unwrap();
+        let data = vec![0u8; MAX_STATEMENT_STORE_ENCODED_SIZE];
+        let statement = build_signed_statement(&data, &signer);
+
+        let error = ensure_statement_store_size(&statement).unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("Statement is too large for node propagation"));
+    }
+}

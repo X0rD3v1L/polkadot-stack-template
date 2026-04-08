@@ -49,9 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Contract { action } => {
             commands::contract::run(action, &cli.eth_rpc_url, &cli.url).await?
         }
-        Commands::Prove(args) => {
-            commands::prove::run(args, &cli.url, &cli.eth_rpc_url).await?
-        }
+        Commands::Prove(args) => commands::prove::run(args, &cli.url, &cli.eth_rpc_url).await?,
     }
 
     Ok(())

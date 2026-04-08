@@ -1,4 +1,4 @@
-use crate::commands::{rpc_call, resolve_statement_signer, submit_to_statement_store};
+use crate::commands::{resolve_statement_signer, rpc_call, submit_to_statement_store};
 use clap::Subcommand;
 use codec::Decode;
 use sp_core::Pair;

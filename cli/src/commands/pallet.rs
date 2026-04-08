@@ -87,7 +87,9 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
             }
 
             if statement_store {
-                let bytes = file_bytes.as_ref().ok_or("--statement-store requires --file")?;
+                let bytes = file_bytes
+                    .as_ref()
+                    .ok_or("--statement-store requires --file")?;
                 let statement_signer = resolve_statement_signer(&signer)?;
                 crate::commands::submit_to_statement_store(url, bytes, &statement_signer).await?;
             }

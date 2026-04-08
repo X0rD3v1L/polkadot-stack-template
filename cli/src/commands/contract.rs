@@ -199,7 +199,9 @@ pub async fn run(
             }
 
             if statement_store {
-                let bytes = file_bytes.as_ref().ok_or("--statement-store requires --file")?;
+                let bytes = file_bytes
+                    .as_ref()
+                    .ok_or("--statement-store requires --file")?;
                 let statement_signer_input = bulletin_signer.as_deref().unwrap_or(&signer);
                 let statement_signer = resolve_statement_signer(statement_signer_input)?;
                 crate::commands::submit_to_statement_store(ws_url, bytes, &statement_signer)
