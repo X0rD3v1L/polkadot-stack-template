@@ -1,103 +1,74 @@
-import { blake2b } from "blakejs";
+import { Bytes, compact, u8 } from "@polkadot-api/substrate-bindings";
 
-// Statement Store binary format field tags (from sp_statement_store)
-const FIELD_TAG_AUTH = 0; // Authentication / proof
-const FIELD_TAG_PLAIN_DATA = 4; // Plain data
-const PROOF_TYPE_SR25519 = 1;
+const MAX_STATEMENT_STORE_ENCODED_SIZE = 1024 * 1024 - 1;
+const FIELD_TAG_AUTH = 0;
+const FIELD_TAG_PLAIN_DATA = 8;
+const PROOF_VARIANT_SR25519 = 0;
 
-/**
- * Build the internal Statement binary with just the plain data field.
- * Format: [num_fields: u32_le] [tag: u8] [payload_len: u32_le] [payload]
- */
-function buildDataOnlyStatement(data: Uint8Array): Uint8Array {
-  const numFields = 1;
-  const totalLen = 4 + 1 + 4 + data.length;
-  const buf = new Uint8Array(totalLen);
-  const view = new DataView(buf.buffer);
+const encodeVecU8 = Bytes.enc();
 
+function concatBytes(parts: Uint8Array[]): Uint8Array {
+  const totalLen = parts.reduce((sum, part) => sum + part.length, 0);
+  const result = new Uint8Array(totalLen);
   let offset = 0;
-  view.setUint32(offset, numFields, true);
-  offset += 4;
-  buf[offset] = FIELD_TAG_PLAIN_DATA;
-  offset += 1;
-  view.setUint32(offset, data.length, true);
-  offset += 4;
-  buf.set(data, offset);
 
-  return buf;
+  for (const part of parts) {
+    result.set(part, offset);
+    offset += part.length;
+  }
+
+  return result;
 }
 
-/**
- * Build a signed Statement binary with auth proof + plain data.
- * Proof format: [proof_type: u8] [public_key: 32B] [signature: 64B]
- */
+function ensureFixedLength(
+  value: Uint8Array,
+  length: number,
+  label: string
+): void {
+  if (value.length !== length) {
+    throw new Error(`${label} must be ${length} bytes, got ${value.length}`);
+  }
+}
+
+function encodeSr25519Proof(
+  publicKey: Uint8Array,
+  signature: Uint8Array
+): Uint8Array {
+  ensureFixedLength(publicKey, 32, "Statement Store public key");
+  ensureFixedLength(signature, 64, "Statement Store signature");
+
+  return concatBytes([u8.enc(PROOF_VARIANT_SR25519), signature, publicKey]);
+}
+
+function encodeDataField(data: Uint8Array): Uint8Array {
+  return concatBytes([u8.enc(FIELD_TAG_PLAIN_DATA), encodeVecU8(data)]);
+}
+
+function encodeProofField(
+  publicKey: Uint8Array,
+  signature: Uint8Array
+): Uint8Array {
+  return concatBytes([
+    u8.enc(FIELD_TAG_AUTH),
+    encodeSr25519Proof(publicKey, signature),
+  ]);
+}
+
+function buildStatementSignaturePayload(data: Uint8Array): Uint8Array {
+  // Matches sp_statement_store::Statement::encoded(true) for a data-only statement.
+  return encodeDataField(data);
+}
+
 function buildSignedStatement(
   data: Uint8Array,
   publicKey: Uint8Array,
   signature: Uint8Array
 ): Uint8Array {
-  const proof = new Uint8Array(1 + 32 + 64);
-  proof[0] = PROOF_TYPE_SR25519;
-  proof.set(publicKey, 1);
-  proof.set(signature, 33);
-
-  const numFields = 2;
-  const totalLen = 4 + (1 + 4 + proof.length) + (1 + 4 + data.length);
-  const buf = new Uint8Array(totalLen);
-  const view = new DataView(buf.buffer);
-
-  let offset = 0;
-  view.setUint32(offset, numFields, true);
-  offset += 4;
-
-  // Auth/proof field
-  buf[offset] = FIELD_TAG_AUTH;
-  offset += 1;
-  view.setUint32(offset, proof.length, true);
-  offset += 4;
-  buf.set(proof, offset);
-  offset += proof.length;
-
-  // Plain data field
-  buf[offset] = FIELD_TAG_PLAIN_DATA;
-  offset += 1;
-  view.setUint32(offset, data.length, true);
-  offset += 4;
-  buf.set(data, offset);
-
-  return buf;
-}
-
-/**
- * SCALE-encode a byte array as Vec<u8> (compact length prefix + bytes).
- */
-function scaleEncodeVec(data: Uint8Array): Uint8Array {
-  const len = data.length;
-  let header: Uint8Array;
-
-  if (len < 64) {
-    header = new Uint8Array(1);
-    header[0] = len << 2;
-  } else if (len < 1 << 14) {
-    header = new Uint8Array(2);
-    const val = (len << 2) | 0x01;
-    header[0] = val & 0xff;
-    header[1] = (val >> 8) & 0xff;
-  } else if (len < 1 << 30) {
-    header = new Uint8Array(4);
-    const val = (len << 2) | 0x02;
-    header[0] = val & 0xff;
-    header[1] = (val >> 8) & 0xff;
-    header[2] = (val >> 16) & 0xff;
-    header[3] = (val >> 24) & 0xff;
-  } else {
-    throw new Error("Data too large for SCALE compact encoding");
-  }
-
-  const result = new Uint8Array(header.length + data.length);
-  result.set(header);
-  result.set(data, header.length);
-  return result;
+  return concatBytes([
+    compact.enc(2),
+    encodeProofField(publicKey, signature),
+    encodeDataField(data),
+  ]);
 }
 
 function bytesToHex(bytes: Uint8Array): string {
@@ -116,8 +87,8 @@ function wsToHttp(wsUrl: string): string {
 /**
  * Submit file bytes to the local node's Statement Store.
  *
- * Builds a signed Statement (sp_statement_store format), SCALE-encodes it,
- * and calls the `statement_submit` JSON-RPC method via HTTP POST.
+ * Builds a canonical SCALE-encoded sp_statement_store::Statement and
+ * calls the `statement_submit` JSON-RPC method via HTTP POST.
  */
 export async function submitToStatementStore(
   wsUrl: string,
@@ -125,20 +96,16 @@ export async function submitToStatementStore(
   publicKey: Uint8Array,
   sign: (message: Uint8Array) => Uint8Array | Promise<Uint8Array>
 ): Promise<void> {
-  // 1. Build unsigned statement binary (data only) and hash it
-  const unsignedBinary = buildDataOnlyStatement(fileBytes);
-  const hash = blake2b(unsignedBinary, undefined, 32);
+  const signaturePayload = buildStatementSignaturePayload(fileBytes);
+  const signature = await sign(signaturePayload);
+  const encoded = buildSignedStatement(fileBytes, publicKey, signature);
 
-  // 2. Sign the hash with sr25519
-  const signature = await sign(hash);
+  if (encoded.length > MAX_STATEMENT_STORE_ENCODED_SIZE) {
+    throw new Error(
+      `Statement is too large for node propagation (${encoded.length} encoded bytes, max ${MAX_STATEMENT_STORE_ENCODED_SIZE}). Choose a smaller file.`
+    );
+  }
 
-  // 3. Build the full signed statement binary
-  const signedBinary = buildSignedStatement(fileBytes, publicKey, signature);
-
-  // 4. SCALE-encode as Vec<u8>
-  const encoded = scaleEncodeVec(signedBinary);
-
-  // 5. Submit via JSON-RPC
   const httpUrl = wsToHttp(wsUrl);
   const response = await fetch(httpUrl, {
     method: "POST",
