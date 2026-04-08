@@ -1,9 +1,9 @@
 import { sr25519CreateDerive } from "@polkadot-labs/hdkd";
 import {
-  DEV_PHRASE,
-  entropyToMiniSecret,
-  mnemonicToEntropy,
-  ss58Address,
+	DEV_PHRASE,
+	entropyToMiniSecret,
+	mnemonicToEntropy,
+	ss58Address,
 } from "@polkadot-labs/hdkd-helpers";
 import { getPolkadotSigner } from "polkadot-api/signer";
 import { type PolkadotSigner } from "polkadot-api";
@@ -14,24 +14,24 @@ const miniSecret = entropyToMiniSecret(entropy);
 const derive = sr25519CreateDerive(miniSecret);
 
 export type DevAccount = {
-  name: string;
-  address: string;
-  signer: PolkadotSigner;
+	name: string;
+	address: string;
+	signer: PolkadotSigner;
 };
 
 function createDevAccount(name: string, path: string): DevAccount {
-  const keypair = derive(path);
-  return {
-    name,
-    address: ss58Address(keypair.publicKey),
-    signer: getPolkadotSigner(keypair.publicKey, "Sr25519", keypair.sign),
-  };
+	const keypair = derive(path);
+	return {
+		name,
+		address: ss58Address(keypair.publicKey),
+		signer: getPolkadotSigner(keypair.publicKey, "Sr25519", keypair.sign),
+	};
 }
 
 export const devAccounts: DevAccount[] = [
-  createDevAccount("Alice", "//Alice"),
-  createDevAccount("Bob", "//Bob"),
-  createDevAccount("Charlie", "//Charlie"),
+	createDevAccount("Alice", "//Alice"),
+	createDevAccount("Bob", "//Bob"),
+	createDevAccount("Charlie", "//Charlie"),
 ];
 
 const devPaths = ["//Alice", "//Bob", "//Charlie"];
@@ -42,9 +42,9 @@ const devPaths = ["//Alice", "//Bob", "//Charlie"];
  * (e.g., signing Statement Store statements).
  */
 export function getDevKeypair(index: number): {
-  publicKey: Uint8Array;
-  sign: (message: Uint8Array) => Uint8Array;
+	publicKey: Uint8Array;
+	sign: (message: Uint8Array) => Uint8Array;
 } {
-  const keypair = derive(devPaths[index]);
-  return { publicKey: keypair.publicKey, sign: keypair.sign };
+	const keypair = derive(devPaths[index]);
+	return { publicKey: keypair.publicKey, sign: keypair.sign };
 }

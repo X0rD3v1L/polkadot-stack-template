@@ -11,58 +11,58 @@ const PvmContractPage = lazy(() => import("./pages/PvmContractPage"));
 const AccountsPage = lazy(() => import("./pages/AccountsPage"));
 
 const routeFallback = (
-  <div className="rounded-lg border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-400">
-    Loading page...
-  </div>
+	<div className="rounded-lg border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-400">
+		Loading page...
+	</div>
 );
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <HashRouter>
-      <Routes>
-        <Route element={<App />}>
-          <Route
-            index
-            element={
-              <Suspense fallback={routeFallback}>
-                <HomePage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="pallet"
-            element={
-              <Suspense fallback={routeFallback}>
-                <PalletPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="evm"
-            element={
-              <Suspense fallback={routeFallback}>
-                <EvmContractPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="pvm"
-            element={
-              <Suspense fallback={routeFallback}>
-                <PvmContractPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="accounts"
-            element={
-              <Suspense fallback={routeFallback}>
-                <AccountsPage />
-              </Suspense>
-            }
-          />
-        </Route>
-      </Routes>
-    </HashRouter>
-  </StrictMode>
+	<StrictMode>
+		<HashRouter>
+			<Routes>
+				<Route element={<App />}>
+					<Route
+						index
+						element={
+							<Suspense fallback={routeFallback}>
+								<HomePage />
+							</Suspense>
+						}
+					/>
+					<Route
+						path="pallet"
+						element={
+							<Suspense fallback={routeFallback}>
+								<PalletPage />
+							</Suspense>
+						}
+					/>
+					<Route
+						path="evm"
+						element={
+							<Suspense fallback={routeFallback}>
+								<EvmContractPage />
+							</Suspense>
+						}
+					/>
+					<Route
+						path="pvm"
+						element={
+							<Suspense fallback={routeFallback}>
+								<PvmContractPage />
+							</Suspense>
+						}
+					/>
+					<Route
+						path="accounts"
+						element={
+							<Suspense fallback={routeFallback}>
+								<AccountsPage />
+							</Suspense>
+						}
+					/>
+				</Route>
+			</Routes>
+		</HashRouter>
+	</StrictMode>,
 );
