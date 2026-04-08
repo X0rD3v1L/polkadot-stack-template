@@ -264,11 +264,14 @@ Press Ctrl+C to stop everything.
 ### Running Components Individually
 
 ```bash
-# Node only (no contracts, no frontend)
+# Lightweight solo node only (no contracts, no frontend)
 ./scripts/start-dev.sh
 
-# Node + compile and deploy contracts
+# Lightweight solo node + compile and deploy contracts
 ./scripts/start-dev-with-contracts.sh
+
+# Relay-backed network only
+./scripts/start-local.sh
 
 # Frontend (requires node already running)
 ./scripts/start-frontend.sh
@@ -276,7 +279,10 @@ Press Ctrl+C to stop everything.
 
 The Ethereum RPC endpoint is compatible with MetaMask, Hardhat, ethers.js, and all standard Ethereum tooling.
 
-The local scripts do not rely on `--dev`. They wait for the collator on `ws://127.0.0.1:9944` to expose the Statement Store RPCs before continuing, which keeps local Statement Store flows working with a local relay chain.
+The repo ships two local modes:
+
+- `start-dev.sh` / `start-dev-with-contracts.sh` use `--dev-block-time 3000` for the fastest solo-node workflow. On `polkadot-sdk stable2512-3`, omni-node dev mode does **not** register Statement Store RPCs.
+- `start-all.sh`, `start-zombienet-all.sh`, and `start-local.sh` use Zombienet (relay chain + collator) when you need the full feature set, including Statement Store.
 
 ### CLI
 
@@ -359,7 +365,7 @@ Each contract directory has a `tsconfig.json` that avoids the TypeScript 7.0 dep
 
 ### Statement Store RPCs not available
 
-In polkadot-sdk stable2512-3, `--enable-statement-store` is silently ignored in dev mode (`--dev` or `--dev-block-time`). The dev code path returns early before the statement store configuration is consumed. Use `./scripts/start-zombienet-all.sh` instead — it runs a relay chain + collator where the statement store works correctly.
+In polkadot-sdk stable2512-3, `--enable-statement-store` is silently ignored in dev mode (`--dev` or `--dev-block-time`). The dev code path returns early before the statement store configuration is consumed. Use `./scripts/start-all.sh`, `./scripts/start-zombienet-all.sh`, or `./scripts/start-local.sh` instead — those run a relay chain + collator where the statement store works correctly.
 
 ### Parachain stalls at block 0 on Zombienet
 

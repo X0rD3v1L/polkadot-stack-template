@@ -2,18 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-RPC_URL="${RPC_URL:-ws://127.0.0.1:9944}"
-HTTP_URL="${RPC_URL/ws:\/\//http://}"
-HTTP_URL="${HTTP_URL/wss:\/\//https://}"
-CHAIN_SPEC="$ROOT_DIR/blockchain/chain_spec.json"
-RUNTIME_WASM="$ROOT_DIR/target/release/wbuild/stack-template-runtime/stack_template_runtime.compact.compressed.wasm"
+source "$SCRIPT_DIR/common.sh"
+
+WS_URL="$SUBSTRATE_RPC_WS"
 
 cleanup() {
-  if [[ -n "${NODE_PID:-}" ]]; then
-    kill "$NODE_PID" >/dev/null 2>&1 || true
-    wait "$NODE_PID" >/dev/null 2>&1 || true
-  fi
+  cleanup_zombienet
   rm -rf "${TMP_DIR:-}"
 }
 
@@ -27,15 +21,7 @@ require_command() {
 }
 
 TMP_DIR="$(mktemp -d)"
-NODE_LOG="$TMP_DIR/node.log"
 TEST_FILE="$TMP_DIR/statement.txt"
-
-rpc_ready() {
-  curl -s \
-    -H "Content-Type: application/json" \
-    -d '{"jsonrpc":"2.0","id":1,"method":"rpc_methods","params":[]}' \
-    "$HTTP_URL" 2>/dev/null | grep -q '"statement_submit"'
-}
 
 echo "=== Statement Store Smoke Test ==="
 echo ""
@@ -43,64 +29,22 @@ echo ""
 require_command cargo
 require_command curl
 require_command chain-spec-builder
+require_command polkadot
 require_command polkadot-omni-node
-
-# Extract port from RPC_URL and check it's free
-RPC_PORT="$(echo "$RPC_URL" | sed -E 's|.*:([0-9]+)$|\1|')"
-if lsof -i :"$RPC_PORT" >/dev/null 2>&1; then
-  echo "ERROR: Port $RPC_PORT is already in use." >&2
-  lsof -i :"$RPC_PORT" 2>/dev/null | head -5 >&2
-  echo "Kill the process above or set RPC_URL to a different port." >&2
-  exit 1
-fi
+require_command zombienet
 
 echo "[1/6] Building runtime..."
-cargo build -p stack-template-runtime --release
+build_runtime
 
 echo "[2/6] Generating chain spec..."
-chain-spec-builder \
-  -c "$CHAIN_SPEC" \
-  create \
-  --chain-name "Polkadot Stack Template" \
-  --chain-id "polkadot-stack-template" \
-  -t development \
-  --relay-chain rococo-local \
-  --para-id 1000 \
-  --runtime "$RUNTIME_WASM" \
-  named-preset development
+generate_chain_spec
 
-echo "[3/6] Starting omni-node with Statement Store enabled..."
-polkadot-omni-node \
-  --chain "$CHAIN_SPEC" \
-  --tmp \
-  --alice \
-  --force-authoring \
-  --no-prometheus \
-  --unsafe-force-node-key-generation \
-  --rpc-cors all \
-  --rpc-port 9944 \
-  --enable-statement-store \
-  -- \
-  --no-prometheus \
-  >"$NODE_LOG" 2>&1 &
-NODE_PID=$!
-
-echo "  Waiting for RPC at $RPC_URL..."
-for _ in $(seq 1 60); do
-  if rpc_ready; then
-    break
-  fi
-  sleep 1
-done
-
-if ! rpc_ready; then
-  echo "Node did not become ready. Recent log output:"
-  tail -n 50 "$NODE_LOG" || true
-  exit 1
-fi
+echo "[3/6] Starting local Zombienet with Statement Store enabled..."
+start_zombienet_background
+wait_for_substrate_rpc
 
 echo "[4/6] Verifying the store starts empty..."
-EMPTY_DUMP="$(cargo run -q -p stack-cli -- --url "$RPC_URL" chain statement-dump)"
+EMPTY_DUMP="$(cargo run -q -p stack-cli -- --url "$WS_URL" chain statement-dump)"
 if ! grep -q "No statements in the store." <<<"$EMPTY_DUMP"; then
   echo "Expected an empty store, got:"
   echo "$EMPTY_DUMP"
@@ -112,7 +56,7 @@ cat >"$TEST_FILE" <<'EOF'
 statement-store-smoke
 EOF
 
-SUBMIT_OUTPUT="$(cargo run -q -p stack-cli -- --url "$RPC_URL" chain statement-submit --file "$TEST_FILE" --signer alice)"
+SUBMIT_OUTPUT="$(cargo run -q -p stack-cli -- --url "$WS_URL" chain statement-submit --file "$TEST_FILE" --signer alice)"
 STATEMENT_HASH="$(
   grep -E "Statement hash:|Hash:" <<<"$SUBMIT_OUTPUT" | awk '{print $NF}'
 )"
@@ -124,7 +68,7 @@ if [[ -z "$STATEMENT_HASH" ]]; then
 fi
 
 echo "[6/6] Dumping statements and checking the submitted hash is present..."
-DUMP_OUTPUT="$(cargo run -q -p stack-cli -- --url "$RPC_URL" chain statement-dump)"
+DUMP_OUTPUT="$(cargo run -q -p stack-cli -- --url "$WS_URL" chain statement-dump)"
 
 if ! grep -q "$STATEMENT_HASH" <<<"$DUMP_OUTPUT"; then
   echo "Submitted statement hash $STATEMENT_HASH not found in dump:"

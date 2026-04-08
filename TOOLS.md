@@ -28,15 +28,17 @@ Statement Store is an omni-node feature for validating, storing, and gossiping s
 - **Runtime pieces**: `pallet-statement` + `sp-statement-store` runtime API
 - **Node flag**: `--enable-statement-store`
 - **RPC methods**: `statement_submit`, `statement_dump`, plus the topic/key query variants
-- **Local status in this template**: Enabled by default in the repo's local Zombienet-backed scripts
+- **Local status in this template**: Available in the repo's relay-backed Zombienet scripts; unavailable in omni-node dev mode on stable2512-3
 
-The local scripts generate a local relay-chain-backed spec and then start a fixed-port Zombienet network (2 relay validators + 1 collator). They wait until `statement_submit` appears in `rpc_methods`, so the Statement Store RPCs are actually present before contract deployment or frontend startup continues.
+The full-feature local scripts generate a local relay-chain-backed spec and then start a fixed-port Zombienet network (2 relay validators + 1 collator). They wait until `statement_submit` appears in `rpc_methods`, so the Statement Store RPCs are actually present before contract deployment or frontend startup continues.
+
+The lighter solo-node scripts (`start-dev.sh`, `start-dev-with-contracts.sh`, and Docker Compose) use omni-node dev mode for a faster iteration loop. On `polkadot-sdk stable2512-3`, that dev path does not wire up Statement Store even if `--enable-statement-store` is passed.
 
 The current template integration is active in all three local entry points:
 
 - CLI: signed submission and dump flows via `stack-cli chain statement-submit` / `statement-dump`
 - Frontend: optional Statement Store submission on the pallet and contract claim pages
-- Scripts: [`scripts/test-statement-store-smoke.sh`](scripts/test-statement-store-smoke.sh) runs an end-to-end local-node submission and dump check
+- Scripts: [`scripts/test-statement-store-smoke.sh`](scripts/test-statement-store-smoke.sh) runs a relay-backed local submission and dump check
 
 ## pallet-revive (EVM + PVM)
 

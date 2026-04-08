@@ -202,7 +202,6 @@ start_local_node_background() {
         --unsafe-force-node-key-generation \
         --rpc-cors all \
         --rpc-port 9944 \
-        --enable-statement-store \
         -- >"$NODE_LOG" 2>&1 &
     NODE_PID=$!
 
@@ -223,7 +222,6 @@ run_local_node_foreground() {
         --unsafe-force-node-key-generation \
         --rpc-cors all \
         --rpc-port 9944 \
-        --enable-statement-store \
         --
 }
 

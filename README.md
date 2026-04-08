@@ -45,7 +45,7 @@ A React + Vite + TypeScript + Tailwind CSS frontend.
 - **Contract interaction**: [viem](https://viem.sh/) through the eth-rpc proxy with Ethereum dev accounts
 - **Endpoints**: Configurable Substrate WS and Ethereum JSON-RPC endpoints, with local-dev defaults on `localhost` and testnet defaults on hosted deployments
 - **Bulletin Chain**: Optional IPFS upload via the Polkadot Bulletin Chain with clickable IPFS links
-- **Pages**: Home (connection + pallet detection), Pallet PoE, EVM PoE, PVM PoE, Accounts
+- **Pages**: Home (connection + pallet detection), Pallet PoE, EVM PoE, PVM PoE, Statements, Accounts
 - **State management**: Zustand
 
 ### CLI
@@ -61,9 +61,11 @@ A Rust CLI tool using [subxt](https://github.com/parity-tech/subxt) and [alloy](
 
 ### Deployment
 
-- [`scripts/start-all.sh`](scripts/start-all.sh) - Build runtime, deploy contracts, and start frontend — one command quick start
-- [`scripts/start-dev.sh`](scripts/start-dev.sh) - Build runtime, start local node
-- [`scripts/start-dev-with-contracts.sh`](scripts/start-dev-with-contracts.sh) - All of the above + compile and deploy both contracts
+- [`scripts/start-all.sh`](scripts/start-all.sh) - Full working local stack via Zombienet: relay chain, collator, Statement Store, contracts, and frontend
+- [`scripts/start-dev.sh`](scripts/start-dev.sh) - Lightweight solo-node runtime/pallet loop (no Statement Store on stable2512-3)
+- [`scripts/start-dev-with-contracts.sh`](scripts/start-dev-with-contracts.sh) - Lightweight solo-node contracts loop (no Statement Store on stable2512-3)
+- [`scripts/start-local.sh`](scripts/start-local.sh) - Relay-backed Zombienet network only
+- [`scripts/start-zombienet-all.sh`](scripts/start-zombienet-all.sh) - Explicit full-feature alias for `start-all.sh`
 - [`scripts/deploy-paseo.sh`](scripts/deploy-paseo.sh) - Deploy contracts to Polkadot TestNet
 - [`scripts/deploy-frontend.sh`](scripts/deploy-frontend.sh) - Deploy frontend to IPFS
 - [`.github/workflows/deploy-frontend.yml`](.github/workflows/deploy-frontend.yml) - Optional manual CI deploy to IPFS + DotNS
@@ -97,14 +99,19 @@ The repo includes [`.nvmrc`](.nvmrc) and `engines` fields in the JavaScript proj
 # Frontend:      http://localhost:5173
 ```
 
+`start-all.sh` is the recommended full-feature local path. It uses Zombienet under the hood so the Statement Store example works on `polkadot-sdk stable2512-3`.
+
 Or run components individually:
 
 ```bash
-# Start just the dev chain
+# Start just the lightweight solo dev chain
 ./scripts/start-dev.sh
 
-# Start chain + compile and deploy contracts
+# Start the lightweight solo dev chain + compile and deploy contracts
 ./scripts/start-dev-with-contracts.sh
+
+# Start a relay-backed local network only
+./scripts/start-local.sh
 
 # In another terminal, start the frontend
 ./scripts/start-frontend.sh
@@ -117,7 +124,7 @@ cargo run -p stack-cli -- chain statement-submit --file ./README.md --signer ali
 cargo run -p stack-cli -- chain statement-dump
 ```
 
-The local contract/dev scripts generate a local chain spec, then start a single local omni-node on `ws://127.0.0.1:9944` and wait until the chain is actively authoring blocks before continuing. Use `./scripts/start-local.sh` when you specifically want the Zombienet relay-chain + collator topology.
+The solo-node dev scripts (`start-dev.sh` and `start-dev-with-contracts.sh`) generate a local chain spec, then start a single local omni-node on `ws://127.0.0.1:9944` for quick runtime/contract iteration. On stable2512-3 they do **not** expose Statement Store RPCs because omni-node dev mode drops the statement-store wiring. Use `./scripts/start-all.sh`, `./scripts/start-zombienet-all.sh`, or `./scripts/start-local.sh` when you specifically need the relay-backed Statement Store example.
 
 The frontend keeps `deployments.json` and `web/src/config/deployments.ts` as checked-in stubs. Deploy scripts update both files automatically after a successful contract deployment.
 
@@ -166,7 +173,7 @@ SKIP_PALLET_REVIVE_FIXTURES=1 cargo test --workspace --features runtime-benchmar
 cargo test -p stack-template-runtime
 cargo test -p stack-cli
 
-# End-to-end local node smoke test
+# Relay-backed Statement Store smoke test
 ./scripts/test-statement-store-smoke.sh
 
 # Solidity tests (local Hardhat network)

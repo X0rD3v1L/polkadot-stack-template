@@ -119,16 +119,17 @@ export default function StatementStorePage() {
 				<p className="text-gray-400">
 					View statements stored in the node's local Statement Store.
 				</p>
-				<div className="bg-gray-900 rounded-lg p-5 border border-gray-800">
-					<p className="text-gray-500 text-sm">
-						The connected node does not expose Statement Store RPCs. In
-						polkadot-sdk stable2512-3, the statement store is only available in
-						non-dev mode (requires a relay chain via Zombienet). Use{" "}
-						<code className="text-gray-400">./scripts/start-zombienet-all.sh</code>{" "}
-						to start a full environment with Statement Store support.
-					</p>
+					<div className="bg-gray-900 rounded-lg p-5 border border-gray-800">
+						<p className="text-gray-500 text-sm">
+							The connected node does not expose Statement Store RPCs. In
+							polkadot-sdk stable2512-3, the statement store is only available in
+							the relay-backed path. Use{" "}
+							<code className="text-gray-400">./scripts/start-all.sh</code> (or{" "}
+							<code className="text-gray-400">./scripts/start-zombienet-all.sh</code>){" "}
+							to start a full environment with Statement Store support.
+						</p>
+					</div>
 				</div>
-			</div>
 		);
 	}
 

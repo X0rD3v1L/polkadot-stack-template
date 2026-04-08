@@ -134,11 +134,11 @@ TestNet details:
 ./scripts/start-dev.sh
 ```
 
-This builds the runtime WASM, generates a chain spec, and starts the node. Endpoints:
+This builds the runtime WASM, generates a chain spec, and starts the lightweight solo-node path. Endpoints:
 - **Substrate RPC**: `ws://127.0.0.1:9944`
-- **Ethereum RPC**: `http://127.0.0.1:8545` (requires `eth-rpc --dev` running separately)
+- **Ethereum RPC**: `http://127.0.0.1:8545` (requires `eth-rpc` running separately)
 
-The repo's local scripts intentionally avoid `--dev`. On the omni-node release paired with `polkadot-sdk stable2512-3`, Statement Store RPCs are exposed with explicit local-authority flags, but not when using `--dev`.
+This solo-node mode is intentionally optimized for quick runtime and contract iteration. On the omni-node release paired with `polkadot-sdk stable2512-3`, Statement Store is **not** available in dev mode, so use the relay-backed scripts (`./scripts/start-all.sh`, `./scripts/start-zombienet-all.sh`, or `./scripts/start-local.sh`) when you need the Statement Store example working locally.
 
 ### Local node flags
 
@@ -150,9 +150,9 @@ polkadot-omni-node \
   --tmp \
   --alice \
   --force-authoring \
+  --dev-block-time 3000 \
   --unsafe-force-node-key-generation \
-  --rpc-cors all \
-  --enable-statement-store
+  --rpc-cors all
 ```
 
 What each flag is doing:
@@ -161,9 +161,9 @@ What each flag is doing:
 - `--tmp`: use a temporary base path and delete chain data on shutdown
 - `--alice`: use Alice's dev keys for authoring and signing
 - `--force-authoring`: keep producing blocks even without peers
+- `--dev-block-time 3000`: use omni-node's solo dev sealing mode so blocks keep authoring without a relay chain
 - `--unsafe-force-node-key-generation`: allow omni-node to generate a temporary network key for this throwaway local authority
 - `--rpc-cors all`: keep browser-based local tooling working without extra CORS setup
-- `--enable-statement-store`: enable Statement Store networking, validation, and `statement_*` RPC methods
 
 When you might change these later:
 
@@ -172,6 +172,7 @@ When you might change these later:
 - If you remove `--tmp`, you should also stop relying on `--unsafe-force-node-key-generation` and generate a stable node key instead.
 - Replace `--alice` with another dev account or your own key setup if you do not want Alice authoring blocks.
 - Remove `--force-authoring` if you only want block production when the node is fully participating in a network.
+- Remove `--dev-block-time` only if you are switching to a relay-backed environment such as Zombienet.
 
 This repo now generates a repo-specific chain ID instead of the generic `custom` default. That reduces accidental collisions with other local projects. If you move to a persistent base path later, it is still a good idea to keep the base path unique per project.
 
@@ -189,13 +190,15 @@ The Docker image copies [`blockchain/chain_spec.json`](blockchain/chain_spec.jso
 # or run the build + chain-spec-builder steps from INSTALL.md manually
 ```
 
-The Docker setup also avoids `--dev` for the same Statement Store reason. Unlike the localhost scripts, it includes `--rpc-methods=unsafe` because the container exposes RPC externally via `--rpc-external`, and Substrate's default RPC safety policy only auto-allows unsafe RPCs on loopback addresses.
+The Docker setup mirrors the lightweight solo-node mode. It uses `--dev-block-time 3000` so the container keeps authoring blocks without a relay chain, but it does **not** expose Statement Store on stable2512-3. Unlike the localhost scripts, it includes `--rpc-methods=unsafe` because the container exposes RPC externally via `--rpc-external`, and Substrate's default RPC safety policy only auto-allows unsafe RPCs on loopback addresses.
 
 ### Zombienet (multi-node)
 
 ```bash
-zombienet spawn blockchain/zombienet.toml
+./scripts/start-local.sh
 ```
+
+Use `./scripts/start-all.sh` or `./scripts/start-zombienet-all.sh` if you want the relay-backed network plus contract deployment and frontend startup in one command.
 
 ## Bulletin Chain (IPFS Upload)
 

@@ -21,6 +21,10 @@ trap cleanup EXIT INT TERM
 
 echo "=== Polkadot Stack Template - Local Dev with Contracts ==="
 echo ""
+echo "  This is the lightweight solo-node path for contract/frontend iteration."
+echo "  Statement Store is not available here on stable2512-3."
+echo "  Use start-all.sh (or start-zombienet-all.sh) for the full relay-backed stack."
+echo ""
 
 # Build the runtime
 echo "[1/5] Building runtime..."
@@ -61,6 +65,7 @@ echo ""
 echo "=== Dev environment running ==="
 echo "  Substrate RPC: ws://127.0.0.1:9944"
 echo "  Ethereum RPC:  http://127.0.0.1:8545"
+echo "  Statement Store: unavailable in this solo-node mode"
 echo ""
 echo "  Frontend: cd web && npm install && npm run dev"
 echo ""
