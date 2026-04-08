@@ -28,9 +28,9 @@ Statement Store is an omni-node feature for validating, storing, and gossiping s
 - **Runtime pieces**: `pallet-statement` + `sp-statement-store` runtime API
 - **Node flag**: `--enable-statement-store`
 - **RPC methods**: `statement_submit`, `statement_dump`, plus the topic/key query variants
-- **Local status in this template**: Enabled by default in the repo's local omni-node scripts
+- **Local status in this template**: Enabled by default in the repo's local Zombienet-backed scripts
 
-The local scripts use explicit local-authority flags (`--tmp --alice --force-authoring`) together with a locally generated relay-chain-backed chain spec, so Statement Store RPCs are available without syncing a public relay chain.
+The local scripts generate a local relay-chain-backed spec and then start a fixed-port Zombienet network (2 relay validators + 1 collator). They wait until `statement_submit` appears in `rpc_methods`, so the Statement Store RPCs are actually present before contract deployment or frontend startup continues.
 
 The current template integration is active in all three local entry points:
 

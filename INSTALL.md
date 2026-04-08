@@ -31,6 +31,28 @@ nvm use || nvm install
 
 The repo root includes `.nvmrc`, and the JavaScript projects declare `engines.node` / `engines.npm`, so package managers and editors can surface version mismatches early.
 
+### Polkadot Relay Chain Binary
+
+The local relay chain is started through `zombienet`, which launches the `polkadot` binary. Use the version matching the SDK release (stable2512-3).
+
+Download the prebuilt binary for your platform from:
+
+https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3
+
+**macOS (Apple Silicon):**
+```bash
+curl -L https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2512-3/polkadot-aarch64-apple-darwin -o polkadot
+chmod +x polkadot
+sudo mv polkadot /usr/local/bin/
+```
+
+**Linux (x86_64):**
+```bash
+curl -L https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2512-3/polkadot -o polkadot
+chmod +x polkadot
+sudo mv polkadot /usr/local/bin/
+```
+
 ### Polkadot Omni Node
 
 The local dev chain runs on `polkadot-omni-node`. **You must use the version matching the SDK release (stable2512-3).**
@@ -81,6 +103,9 @@ eth-rpc --version
 
 Verify the version:
 ```bash
+polkadot --version
+# Should output: polkadot 1.21.3-...
+
 polkadot-omni-node --version
 # Should output: polkadot-omni-node 1.21.3-...
 ```
@@ -93,6 +118,22 @@ Used to generate the chain specification from the runtime WASM.
 
 ```bash
 cargo install staging-chain-spec-builder
+```
+
+### Zombienet
+
+The local dev scripts use `zombienet` to start the relay-chain + collator topology on fixed local ports.
+
+One common install path is:
+
+```bash
+npm install -g @zombienet/cli
+```
+
+Verify:
+
+```bash
+zombienet version
 ```
 
 ### Solidity Tooling (for smart contracts)
@@ -166,7 +207,7 @@ The repo keeps `web/src/config/deployments.ts` as a checked-in stub so the front
 ./scripts/start-all.sh
 ```
 
-This builds the runtime, generates a chain spec, starts the omni-node and eth-rpc adapter, compiles and deploys both contracts, and starts the frontend — all in one command.
+This builds the runtime, generates a chain spec, starts the local Zombienet relay-chain + collator network, starts the eth-rpc adapter, compiles and deploys both contracts, and starts the frontend — all in one command.
 
 - **Substrate RPC**: `ws://127.0.0.1:9944`
 - **Ethereum RPC**: `http://127.0.0.1:8545` (via eth-rpc adapter)
@@ -188,6 +229,8 @@ Press Ctrl+C to stop everything.
 ```
 
 The Ethereum RPC endpoint is compatible with MetaMask, Hardhat, ethers.js, and all standard Ethereum tooling.
+
+The local scripts do not rely on `--dev`. They wait for the collator on `ws://127.0.0.1:9944` to expose the Statement Store RPCs before continuing, which keeps local Statement Store flows working with a local relay chain.
 
 ### CLI
 

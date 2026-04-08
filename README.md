@@ -21,7 +21,7 @@ A Cumulus-based parachain runtime built on **polkadot-sdk stable2512** with smar
 - **Source**: [`blockchain/runtime/`](blockchain/runtime/)
 - **Pallets included**: System, Balances, Aura, Session, Sudo, XCM, pallet-revive, TemplatePallet
 - **pallet-revive**: Enables both EVM and PVM smart contract execution with Ethereum RPC compatibility
-- **Runs locally** via the repo scripts, which use an explicit chain spec plus `--tmp --alice --force-authoring --enable-statement-store`
+- **Runs locally** via the repo scripts, which use a Zombienet-backed local relay chain and a collator with `--enable-statement-store`
 
 ### Solidity Smart Contracts
 
@@ -77,8 +77,10 @@ A Rust CLI tool using [subxt](https://github.com/parity-tech/subxt) and [alloy](
 
 - **Rust** (stable, installed via [rustup](https://rustup.rs/))
 - **Node.js** 22.x LTS (`22.5+` recommended) and npm v10.9.0+
+- **polkadot** v1.21.3 ([download](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3)) for the local relay chain
 - **polkadot-omni-node** v1.21.3 ([download](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3))
 - **eth-rpc** v0.12.0 ([download](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3)) - Ethereum JSON-RPC adapter
+- **zombienet** for the local relay-chain + collator topology
 - **chain-spec-builder** (`cargo install staging-chain-spec-builder`)
 
 See [INSTALL.md](INSTALL.md) for detailed setup instructions.
@@ -115,7 +117,7 @@ cargo run -p stack-cli -- chain statement-submit --file ./README.md --signer ali
 cargo run -p stack-cli -- chain statement-dump
 ```
 
-The local dev scripts start `polkadot-omni-node` with Statement Store enabled by default, so omni-node's `statement_*` RPC methods are available on the same RPC port (`9944`). They also generate a chain spec with a local relay chain, so local development does not need to sync Paseo.
+The local dev scripts generate a local chain spec, then start a fixed-port Zombienet network with two relay validators and one collator on `ws://127.0.0.1:9944`. The collator runs with Statement Store enabled, and the scripts wait until `statement_submit` is exposed before continuing, so local development does not depend on `--dev` mode or a public relay chain.
 
 The frontend keeps `deployments.json` and `web/src/config/deployments.ts` as checked-in stubs. Deploy scripts update both files automatically after a successful contract deployment.
 

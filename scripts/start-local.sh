@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 echo "=== Polkadot Stack Template - Local Zombienet ==="
 echo ""
 echo "  Spawning relay chain + parachain via zombienet..."
 echo ""
 
-cd "$ROOT_DIR/blockchain"
-zombienet -p native spawn zombienet.toml
+run_zombienet_foreground
