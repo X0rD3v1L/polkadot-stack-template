@@ -12,10 +12,10 @@ All scripts resolve the repo root automatically, so you can run them from the re
 
 | Script | What it does | When to use it |
 | --- | --- | --- |
-| `start-dev.sh` | Builds the runtime, generates `blockchain/chain_spec.json`, and starts the fixed-port local Zombienet network (2 relay validators + 1 collator with Statement Store enabled). | Use this when you only need the local parachain RPC and runtime, without Ethereum RPC, contract deployment, or the frontend. |
-| `start-dev-with-contracts.sh` | Builds the runtime, generates the local-relay-chain spec, compiles both contract projects, starts the local Zombienet network plus `eth-rpc`, waits for Statement Store and Ethereum RPC readiness, and deploys the EVM and PVM Proof of Existence contracts to the local chain. | Use this when you want a local chain that is ready for contract testing from the CLI or frontend, but you do not need the frontend started for you. |
+| `start-dev.sh` | Builds the runtime, generates `blockchain/chain_spec.json`, and starts a single local omni-node on `ws://127.0.0.1:9944`. | Use this when you only need the local parachain RPC and runtime, without Ethereum RPC, contract deployment, or the frontend. |
+| `start-dev-with-contracts.sh` | Builds the runtime, generates the local chain spec, compiles both contract projects, starts a single local omni-node plus `eth-rpc`, waits for the local chain and Ethereum RPC readiness, and deploys the EVM and PVM Proof of Existence contracts to the local chain. | Use this when you want a local chain that is ready for contract testing from the CLI or frontend, but you do not need the frontend started for you. |
 | `start-frontend.sh` | Installs frontend dependencies, refreshes PAPI descriptors if a local node is running on `ws://127.0.0.1:9944`, and starts the Vite dev server. | Use this when the chain is already running and you only want to work on the web app. |
-| `start-all.sh` | Runs the full local stack: runtime build, local-relay-chain spec generation, contract compilation, local Zombienet startup, `eth-rpc`, local contract deployment, and frontend startup. | Use this when you want the fastest one-command setup for full-stack local development. |
+| `start-all.sh` | Runs the full local stack: runtime build, local chain-spec generation, contract compilation, single-node startup, `eth-rpc`, local contract deployment, and frontend startup. | Use this when you want the fastest one-command setup for full-stack local development. |
 | `start-local.sh` | Starts the Zombienet-based local network defined by `blockchain/zombienet.toml` using the fixed local ports expected by the repo tooling. | Use this when you want to inspect or work with the relay-chain + parachain network directly, without the contract/frontend setup steps. |
 | `deploy-paseo.sh` | Installs dependencies, compiles, and deploys the EVM and PVM contracts to the Polkadot testnet configuration used by the Hardhat projects. | Use this when you are deploying contract examples to testnet rather than running them locally. Make sure the required `PRIVATE_KEY` values are configured first. |
 | `deploy-frontend.sh` | Builds the frontend and uploads `web/dist` to IPFS using the `w3` CLI, then prints the CID and suggested DotNS follow-up steps. | Use this when you want to publish the frontend as a static deployment. |
@@ -24,7 +24,7 @@ All scripts resolve the repo root automatically, so you can run them from the re
 ## Notes
 
 - `start-dev.sh`, `start-dev-with-contracts.sh`, `start-all.sh`, and `test-statement-store-smoke.sh` depend on local Rust and node tooling such as `cargo`, `chain-spec-builder`, and `polkadot-omni-node`.
-- `start-dev.sh`, `start-dev-with-contracts.sh`, `start-all.sh`, and `start-local.sh` also require `polkadot` and `zombienet`.
+- `start-local.sh` requires both `polkadot` and `zombienet`.
 - `start-dev-with-contracts.sh` and `start-all.sh` also require `eth-rpc`.
 - `start-local.sh` requires `zombienet`.
 - `deploy-frontend.sh` requires the `w3` CLI from Web3.Storage.

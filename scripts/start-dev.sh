@@ -17,10 +17,10 @@ generate_chain_spec
 
 echo "  Chain spec written to blockchain/chain_spec.json"
 
-# Start the local network
-echo "[3/3] Starting local relay chain + collator..."
+# Start the local node
+echo "[3/3] Starting local omni-node..."
 echo "  RPC endpoint: ws://127.0.0.1:9944"
 echo ""
 echo "  For Ethereum RPC + contract deployment, use start-dev-with-contracts.sh instead."
 echo ""
-run_zombienet_foreground
+run_local_node_foreground

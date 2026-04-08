@@ -19,7 +19,7 @@ cleanup() {
         kill "$ETH_RPC_PID" 2>/dev/null || true
         wait "$ETH_RPC_PID" 2>/dev/null || true
     fi
-    cleanup_zombienet
+    cleanup_local_node
 }
 trap cleanup EXIT INT TERM
 
@@ -40,9 +40,9 @@ cd "$ROOT_DIR/contracts/evm" && npm install --silent && npx hardhat compile
 cd "$ROOT_DIR/contracts/pvm" && npm install --silent && npx hardhat compile
 cd "$ROOT_DIR"
 
-# Start the local network in background
-echo "[4/7] Starting local relay chain + collator..."
-start_zombienet_background
+# Start the local node in background
+echo "[4/7] Starting local omni-node..."
+start_local_node_background
 wait_for_substrate_rpc
 
 # Start eth-rpc adapter
@@ -86,4 +86,4 @@ echo "  Ethereum RPC:  http://127.0.0.1:8545"
 echo "  Frontend:      http://localhost:5173"
 echo ""
 echo "Press Ctrl+C to stop all."
-wait "$ZOMBIE_PID"
+wait "$NODE_PID"

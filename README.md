@@ -21,7 +21,7 @@ A Cumulus-based parachain runtime built on **polkadot-sdk stable2512** with smar
 - **Source**: [`blockchain/runtime/`](blockchain/runtime/)
 - **Pallets included**: System, Balances, Aura, Session, Sudo, XCM, pallet-revive, TemplatePallet
 - **pallet-revive**: Enables both EVM and PVM smart contract execution with Ethereum RPC compatibility
-- **Runs locally** via the repo scripts, which use a Zombienet-backed local relay chain and a collator with `--enable-statement-store`
+- **Runs locally** via the repo scripts, which start a single local omni-node for day-to-day dev and keep a separate Zombienet flow for relay-chain topology work
 
 ### Solidity Smart Contracts
 
@@ -117,7 +117,7 @@ cargo run -p stack-cli -- chain statement-submit --file ./README.md --signer ali
 cargo run -p stack-cli -- chain statement-dump
 ```
 
-The local dev scripts generate a local chain spec, then start a fixed-port Zombienet network with two relay validators and one collator on `ws://127.0.0.1:9944`. The collator runs with Statement Store enabled, and the scripts wait until `statement_submit` is exposed before continuing, so local development does not depend on `--dev` mode or a public relay chain.
+The local contract/dev scripts generate a local chain spec, then start a single local omni-node on `ws://127.0.0.1:9944` and wait until the chain is actively authoring blocks before continuing. Use `./scripts/start-local.sh` when you specifically want the Zombienet relay-chain + collator topology.
 
 The frontend keeps `deployments.json` and `web/src/config/deployments.ts` as checked-in stubs. Deploy scripts update both files automatically after a successful contract deployment.
 
