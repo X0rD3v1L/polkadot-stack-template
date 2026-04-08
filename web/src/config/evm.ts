@@ -72,7 +72,7 @@ let chainCache: Chain | null = null;
 let chainCacheUrl: string | null = null;
 
 function isLocalEthRpcUrl(url: string) {
-	return url.includes("127.0.0.1") || url.includes("localhost");
+	return url.includes("127.0.0.1") || url.includes("localhost") || url === "/eth-rpc";
 }
 
 export function getPublicClient(ethRpcUrl = getStoredEthRpcUrl()) {
