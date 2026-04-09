@@ -4,9 +4,11 @@
 # No Rust toolchain or polkadot-sdk binaries needed on the host.
 
 # Stage 1 — Build the parachain runtime WASM binary
-FROM rust:1.86-bookworm AS builder
+FROM rust:bookworm AS builder
 WORKDIR /build
-COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+RUN apt-get update && apt-get install -y --no-install-recommends protobuf-compiler && rm -rf /var/lib/apt/lists/*
+RUN rustup target add wasm32-unknown-unknown && rustup component add rust-src
+COPY Cargo.toml Cargo.lock ./
 COPY blockchain/ blockchain/
 COPY cli/ cli/
 RUN cargo build -p stack-template-runtime --release

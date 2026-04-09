@@ -28,7 +28,6 @@ services:
     volumes:
       - chain-data:/data
     command: >
-      polkadot-omni-node
       --chain=/chain/chain_spec.json
       --base-path=/data
       --alice
