@@ -1,4 +1,4 @@
-use crate::commands::{hash_input, resolve_statement_signer, resolve_substrate_signer};
+use crate::commands::{hash_input, parse_h256, resolve_statement_signer, resolve_substrate_signer};
 use clap::Subcommand;
 use subxt::{dynamic::At, OnlineClient, PolkadotConfig};
 
@@ -54,24 +54,13 @@ fn decode_claim(value: &subxt::dynamic::DecodedValueThunk) -> (String, String) {
 	(owner, block)
 }
 
-fn parse_hash(hex: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let hex = hex.strip_prefix("0x").unwrap_or(hex);
-	if hex.len() != 64 {
-		return Err("Hash must be 32 bytes (64 hex characters)".into());
-	}
-	Ok((0..64)
-		.step_by(2)
-		.map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
-		.collect::<Result<Vec<_>, _>>()?)
-}
-
 pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::error::Error>> {
 	let api = OnlineClient::<PolkadotConfig>::from_url(url).await?;
 
 	match action {
 		PalletAction::CreateClaim { hash, file, upload, statement_store, signer } => {
 			let (hash_hex, file_bytes) = hash_input(hash, file.as_deref())?;
-			let hash_bytes = parse_hash(&hash_hex)?;
+			let hash_bytes = parse_h256(&hash_hex)?;
 			let keypair = resolve_substrate_signer(&signer)?;
 
 			if upload {
@@ -99,7 +88,7 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
 			println!("create_claim finalized in block: {}", result.extrinsic_hash());
 		},
 		PalletAction::RevokeClaim { hash, signer } => {
-			let hash_bytes = parse_hash(&hash)?;
+			let hash_bytes = parse_h256(&hash)?;
 			let keypair = resolve_substrate_signer(&signer)?;
 			let tx = subxt::dynamic::tx(
 				"TemplatePallet",
@@ -115,7 +104,7 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
 			println!("revoke_claim finalized in block: {}", result.extrinsic_hash());
 		},
 		PalletAction::GetClaim { hash } => {
-			let hash_bytes = parse_hash(&hash)?;
+			let hash_bytes = parse_h256(&hash)?;
 			let storage_query = subxt::dynamic::storage(
 				"TemplatePallet",
 				"Claims",
@@ -146,8 +135,8 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
 
 			let mut count = 0u32;
 			while let Some(Ok(kv)) = results.next().await {
-				let key_len = kv.key_bytes.len();
-				let hash = format!("0x{}", hex::encode(&kv.key_bytes[key_len - 32..]));
+				let hash =
+					kv.keys.first().map(|k| format!("{k}")).unwrap_or_else(|| "?".to_string());
 				let (owner, block) = decode_claim(&kv.value);
 
 				println!("{:<68} {:<50} {}", hash, owner, block);

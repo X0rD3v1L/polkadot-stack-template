@@ -1,7 +1,7 @@
 use super::ProofOfExistence;
 use crate::commands::{
-	hash_input, resolve_statement_signer, resolve_substrate_signer, submit_to_statement_store,
-	upload_to_bulletin,
+	hash_input, parse_h256, resolve_statement_signer, resolve_substrate_signer,
+	submit_to_statement_store, upload_to_bulletin,
 };
 use alloy::providers::ProviderBuilder;
 use clap::Args;
@@ -81,7 +81,7 @@ pub async fn run(
 		ClaimTarget::Pallet => {
 			let api = OnlineClient::<PolkadotConfig>::from_url(ws_url).await?;
 			let keypair = resolve_substrate_signer(&args.signer)?;
-			let hash_bytes = parse_hash(&hash_hex)?;
+			let hash_bytes = parse_h256(&hash_hex)?;
 
 			let tx = subxt::dynamic::tx(
 				"TemplatePallet",
@@ -107,17 +107,6 @@ fn claim_target(args: &ProveArgs) -> Result<ClaimTarget, Box<dyn std::error::Err
 		(_, Some(contract)) => Ok(ClaimTarget::Contract(contract.to_string())),
 		_ => Ok(ClaimTarget::Pallet),
 	}
-}
-
-fn parse_hash(hex: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-	let hex = hex.strip_prefix("0x").unwrap_or(hex);
-	if hex.len() != 64 {
-		return Err("Hash must be 32 bytes (64 hex characters)".into());
-	}
-	Ok((0..64)
-		.step_by(2)
-		.map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
-		.collect::<Result<Vec<_>, _>>()?)
 }
 
 #[cfg(test)]

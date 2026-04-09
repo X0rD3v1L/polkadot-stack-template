@@ -23,6 +23,16 @@ sol! {
 }
 use codec::Encode;
 use reqwest::Url;
+
+/// Parse a 0x-prefixed hex string into 32 raw bytes.
+pub fn parse_h256(hex_str: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+	let hex = hex_str.strip_prefix("0x").unwrap_or(hex_str);
+	let bytes = hex::decode(hex)?;
+	if bytes.len() != 32 {
+		return Err(format!("Hash must be 32 bytes (64 hex chars), got {}", bytes.len()).into());
+	}
+	Ok(bytes)
+}
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sp_core::Pair;
 use sp_statement_store::Statement;
