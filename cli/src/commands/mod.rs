@@ -3,10 +3,24 @@ pub mod contract;
 pub mod pallet;
 pub mod prove;
 
+use alloy::sol;
 use blake2::{
 	digest::{consts::U32, Digest},
 	Blake2b,
 };
+
+// Shared contract ABI for the ProofOfExistence Solidity contract.
+// Used by both the `contract` and `prove` command modules.
+sol! {
+	#[sol(rpc)]
+	contract ProofOfExistence {
+		function createClaim(bytes32 documentHash) external;
+		function revokeClaim(bytes32 documentHash) external;
+		function getClaim(bytes32 documentHash) external view returns (address owner, uint256 blockNumber);
+		function getClaimCount() external view returns (uint256);
+		function getClaimHashAtIndex(uint256 index) external view returns (bytes32);
+	}
+}
 use codec::Encode;
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};

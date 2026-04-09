@@ -44,7 +44,8 @@ export const proofOfExistenceAbi = [
 	},
 ] as const;
 
-// Well-known Substrate dev account Ethereum private keys
+// Well-known Substrate dev account Ethereum private keys.
+// These are PUBLIC test keys from Substrate dev mnemonics — NEVER use for real funds.
 export const evmDevAccounts = [
 	{
 		name: "Alice",

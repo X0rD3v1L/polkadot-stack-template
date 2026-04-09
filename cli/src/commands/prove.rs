@@ -2,18 +2,12 @@ use crate::commands::{
 	hash_input, resolve_statement_signer, resolve_substrate_signer, submit_to_statement_store,
 	upload_to_bulletin,
 };
-use alloy::{providers::ProviderBuilder, sol};
+use super::ProofOfExistence;
+use alloy::providers::ProviderBuilder;
 use clap::Args;
 use subxt::{OnlineClient, PolkadotConfig};
 
 use super::contract::{get_contract_address, load_deployments, resolve_signer};
-
-sol! {
-	#[sol(rpc)]
-	contract ProofOfExistence {
-		function createClaim(bytes32 documentHash) external;
-	}
-}
 
 #[derive(Args)]
 pub struct ProveArgs {
