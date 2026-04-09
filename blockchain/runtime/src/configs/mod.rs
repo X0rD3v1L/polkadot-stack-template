@@ -206,6 +206,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 }
 
 parameter_types! {
+	/// Session rotation period — sessions last 6 hours worth of blocks.
 	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
 }
@@ -235,6 +236,7 @@ impl pallet_aura::Config for Runtime {
 
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
+	/// Session length for collator-selection kick threshold evaluation.
 	pub const SessionLength: BlockNumber = 6 * HOURS;
 	pub const StakingAdminBodyId: BodyId = BodyId::Defense;
 }
@@ -259,6 +261,11 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
+// Statement Store cost parameters.
+// StatementCost: flat fee per statement (10x existential deposit).
+// StatementByteCost: per-byte fee (existential deposit / 1024).
+// Min/MaxAllowedStatements: per-account statement count limits.
+// Min/MaxAllowedBytes: per-account total byte limits (1 MiB to 16 MiB).
 parameter_types! {
 	pub const StatementCost: Balance = 10 * EXISTENTIAL_DEPOSIT;
 	pub const StatementByteCost: Balance = EXISTENTIAL_DEPOSIT / 1024;
@@ -314,6 +321,8 @@ impl pallet_revive::Config for Runtime {
 	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
+	/// EVM chain ID for local dev. The Polkadot Hub TestNet uses 420420417; this local
+	/// value avoids collisions. Must match the chain ID expected by eth-rpc and wallets.
 	type ChainId = ConstU64<420_420_421>;
 	type NativeToEthRatio = ConstU32<1_000_000>;
 	type FindAuthor = <Runtime as pallet_authorship::Config>::FindAuthor;
