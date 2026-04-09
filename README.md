@@ -100,7 +100,7 @@ Only Node.js is needed on the host. The Docker build compiles the Rust runtime a
 - **zombienet** for the local relay-chain + collator topology
 - **chain-spec-builder** (`cargo install staging-chain-spec-builder`)
 
-See [INSTALL.md](INSTALL.md) for detailed setup instructions.
+See [docs/INSTALL.md](docs/INSTALL.md) for detailed setup instructions.
 
 The repo includes [`.nvmrc`](.nvmrc) and `engines` fields in the JavaScript projects to keep everyone on the same Node major version.
 
@@ -225,6 +225,8 @@ polkadot-stack-template/
 |-- web/                      React + PAPI + viem frontend
 |-- cli/                      subxt + alloy Rust CLI
 |-- scripts/                  Dev and deployment scripts
+|-- docs/                     Installation, deployment, and stack guides
+|-- docker/                   Local Docker build definitions
 |-- Cargo.toml                Rust workspace
 |-- rustfmt.toml              Rust formatting (matches polkadot-sdk style)
 |-- .prettierrc               Prettier config for TypeScript + Solidity
@@ -234,16 +236,16 @@ polkadot-stack-template/
 
 ## Documentation
 
-- [TOOLS.md](TOOLS.md) - All Polkadot stack components used in this template
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide (GitHub Pages, DotNS, contracts, runtime)
-- [INSTALL.md](INSTALL.md) - Detailed setup instructions
+- [docs/TOOLS.md](docs/TOOLS.md) - All Polkadot stack components used in this template
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Deployment guide (GitHub Pages, DotNS, contracts, runtime)
+- [docs/INSTALL.md](docs/INSTALL.md) - Detailed setup instructions
 
 ## Using Only What You Need
 
 - **Pallet only**: Keep [`blockchain/pallets/template/`](blockchain/pallets/template/), [`blockchain/runtime/`](blockchain/runtime/), and optionally [`cli/`](cli/). You can ignore `contracts/`, `web/src/components/ContractProofOfExistencePage.tsx`, and `eth-rpc`.
 - **Contracts only**: Keep [`contracts/`](contracts/) plus the `Revive` runtime wiring in [`blockchain/runtime/`](blockchain/runtime/). The pallet and Bulletin integration are optional.
 - **Frontend only**: The core PoE UI lives in [`web/src/pages/PalletPage.tsx`](web/src/pages/PalletPage.tsx), [`web/src/pages/EvmContractPage.tsx`](web/src/pages/EvmContractPage.tsx), and [`web/src/pages/PvmContractPage.tsx`](web/src/pages/PvmContractPage.tsx). The Accounts page, Spektr support, and Bulletin upload hook can be removed without affecting the basic claim flows.
-- **Optional integrations**: Bulletin Chain, Spektr, and DotNS are isolated extras. They are documented locally in [TOOLS.md](TOOLS.md) and can be skipped entirely for workshops or hackathons.
+- **Optional integrations**: Bulletin Chain, Spektr, and DotNS are isolated extras. They are documented locally in [docs/TOOLS.md](docs/TOOLS.md) and can be skipped entirely for workshops or hackathons.
 
 ## Key Versions
 

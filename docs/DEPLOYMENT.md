@@ -193,7 +193,7 @@ cd blockchain && docker build -t stack-template-node .  # seconds — just copie
 docker push your-registry/stack-template-node        # lightweight ~50MB image
 ```
 
-[`blockchain/Dockerfile`](blockchain/Dockerfile) packages a pre-generated chain spec into the polkadot-omni-node base image without any Rust compilation.
+[`blockchain/Dockerfile`](../blockchain/Dockerfile) packages a pre-generated chain spec into the polkadot-omni-node base image without any Rust compilation.
 
 Both Docker setups mirror the lightweight solo-node mode. They use `--dev-block-time 3000` so the container keeps authoring blocks without a relay chain, but they do **not** expose Statement Store on stable2512-3. They include `--rpc-methods=unsafe` because the container exposes RPC externally via `--rpc-external`, and Substrate's default RPC safety policy only auto-allows unsafe RPCs on loopback addresses.
 

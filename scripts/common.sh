@@ -71,13 +71,13 @@ install_hint() {
             echo "Install with: npm install -g @zombienet/cli"
             ;;
         polkadot|polkadot-omni-node|eth-rpc)
-            echo "See INSTALL.md for the matching stable2512-3 binary install steps."
+            echo "See docs/INSTALL.md for the matching stable2512-3 binary install steps."
             ;;
         curl)
             echo "Install curl with your system package manager."
             ;;
         *)
-            echo "See INSTALL.md for setup guidance."
+            echo "See docs/INSTALL.md for setup guidance."
             ;;
     esac
 }

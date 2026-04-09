@@ -15,7 +15,7 @@ The foundation for the entire blockchain layer. Polkadot SDK provides FRAME (the
 
 - **Version**: stable2512-3 (umbrella crate v2512.3.3)
 - **Used for**: Parachain runtime, pallet development, consensus, XCM
-- **Source**: [`blockchain/runtime/`](blockchain/runtime/), [`blockchain/pallets/template/`](blockchain/pallets/template/)
+- **Source**: [`blockchain/runtime/`](../blockchain/runtime/), [`blockchain/pallets/template/`](../blockchain/pallets/template/)
 - **Docs**: [paritytech.github.io/polkadot-sdk](https://paritytech.github.io/polkadot-sdk/master/)
 
 The runtime includes core pallets (System, Balances, Aura, Session, Sudo, XCM) plus `pallet-revive` for smart contracts and the custom `TemplatePallet` for proof of existence.
@@ -38,7 +38,7 @@ The current template integration is active in all three local entry points:
 
 - CLI: signed submission and dump flows via `stack-cli chain statement-submit` / `statement-dump`
 - Frontend: optional Statement Store submission on the pallet and contract claim pages
-- Scripts: [`scripts/test-statement-store-smoke.sh`](scripts/test-statement-store-smoke.sh) runs a relay-backed local submission and dump check
+- Scripts: [`scripts/test-statement-store-smoke.sh`](../scripts/test-statement-store-smoke.sh) runs a relay-backed local submission and dump check
 
 ## pallet-revive (EVM + PVM)
 
@@ -48,7 +48,7 @@ Enables both EVM and PolkaVM smart contract execution on the parachain. Contract
 - **Compilers**: `solc` v0.8.28 (EVM bytecode), `resolc` v1.0.0 (PolkaVM/RISC-V bytecode)
 - **RPC**: eth-rpc adapter bridges Ethereum JSON-RPC to pallet-revive
 - **Used for**: `ProofOfExistence.sol` deployed to both EVM and PVM backends
-- **Source**: [`contracts/evm/`](contracts/evm/), [`contracts/pvm/`](contracts/pvm/)
+- **Source**: [`contracts/evm/`](../contracts/evm/), [`contracts/pvm/`](../contracts/pvm/)
 - **Docs**: [docs.polkadot.com/smart-contracts](https://docs.polkadot.com/smart-contracts/overview/)
 
 ### How it works
@@ -79,7 +79,7 @@ The Polkadot Bulletin Chain is a system chain that provides on-chain data storag
 - **Data expiry**: ~7 days (100,800 blocks) unless renewed
 - **Max file size**: 8 MiB per transaction
 - **Used for**: Optional IPFS upload of files before claiming their hash on-chain
-- **Source**: [`web/src/hooks/useBulletin.ts`](web/src/hooks/useBulletin.ts), [`cli/src/commands/mod.rs`](cli/src/commands/mod.rs)
+- **Source**: [`web/src/hooks/useBulletin.ts`](../web/src/hooks/useBulletin.ts), [`cli/src/commands/mod.rs`](../cli/src/commands/mod.rs)
 
 Authorization on Bulletin Paseo is temporary. The allowance expires at a block roughly 100,000 blocks in the future, and the same UI exposes `Renew` if you need more time. If upload fails with an authorization error, first check that you authorized the same Substrate address that is signing `TransactionStorage.store()`.
 
@@ -113,7 +113,7 @@ The JavaScript/TypeScript library for interacting with Substrate chains. PAPI pr
 - **Version**: v1.23.3
 - **Used for**: Frontend pallet interaction (create/revoke claims, query storage, block subscription)
 - **Descriptors**: Stored in `web/.papi/`, regenerated from a running chain via `npm run update-types`
-- **Source**: [`web/src/hooks/useChain.ts`](web/src/hooks/useChain.ts), [`web/src/hooks/useConnection.ts`](web/src/hooks/useConnection.ts)
+- **Source**: [`web/src/hooks/useChain.ts`](../web/src/hooks/useChain.ts), [`web/src/hooks/useConnection.ts`](../web/src/hooks/useConnection.ts)
 - **Docs**: [papi.how](https://papi.how/)
 
 ### Key patterns
@@ -140,7 +140,7 @@ The Rust library for interacting with Substrate chains. Used by the CLI for nati
 
 - **Version**: 0.38
 - **Used for**: CLI pallet commands (create-claim, revoke-claim, get-claim, list-claims)
-- **Source**: [`cli/src/commands/pallet.rs`](cli/src/commands/pallet.rs)
+- **Source**: [`cli/src/commands/pallet.rs`](../cli/src/commands/pallet.rs)
 - **Docs**: [github.com/parity-tech/subxt](https://github.com/parity-tech/subxt)
 
 ### Key patterns
@@ -161,7 +161,7 @@ The Rust library for interacting with Ethereum-compatible chains. Used by the CL
 
 - **Version**: 1.8
 - **Used for**: CLI contract commands (create-claim, revoke-claim, get-claim)
-- **Source**: [`cli/src/commands/contract.rs`](cli/src/commands/contract.rs)
+- **Source**: [`cli/src/commands/contract.rs`](../cli/src/commands/contract.rs)
 - **Docs**: [alloy.rs](https://alloy.rs)
 
 ### Key patterns
@@ -190,7 +190,7 @@ The JavaScript library for interacting with Ethereum-compatible chains. Used by 
 
 - **Version**: v2.x
 - **Used for**: Frontend contract pages (create/revoke claims, query claims), Hardhat tests and deploy scripts
-- **Source**: [`web/src/config/evm.ts`](web/src/config/evm.ts), [`web/src/components/ContractProofOfExistencePage.tsx`](web/src/components/ContractProofOfExistencePage.tsx)
+- **Source**: [`web/src/config/evm.ts`](../web/src/config/evm.ts), [`web/src/components/ContractProofOfExistencePage.tsx`](../web/src/components/ContractProofOfExistencePage.tsx)
 - **Docs**: [viem.sh](https://viem.sh)
 
 The frontend now exposes the Ethereum JSON-RPC endpoint on the home page, instead of hard-coding localhost. That keeps GitHub Pages/IPFS deployments usable against testnet contracts.
@@ -201,7 +201,7 @@ The Ethereum development framework used for compiling, testing, and deploying So
 
 - **Version**: v2.27+
 - **Plugins**: `@nomicfoundation/hardhat-viem` (viem integration), `@parity/hardhat-polkadot` (PVM/resolc support), `@nomicfoundation/hardhat-verify` (Blockscout verification)
-- **Source**: [`contracts/evm/`](contracts/evm/), [`contracts/pvm/`](contracts/pvm/)
+- **Source**: [`contracts/evm/`](../contracts/evm/), [`contracts/pvm/`](../contracts/pvm/)
 - **Docs**: [hardhat.org](https://hardhat.org)
 
 ### Commands
@@ -236,7 +236,7 @@ The Nova Sama Technologies SDK for building products that run inside the Polkado
 
 - **Package**: `@novasamatech/product-sdk`
 - **Used for**: Spektr account detection and injection on the Accounts page
-- **Source**: [`web/src/pages/AccountsPage.tsx`](web/src/pages/AccountsPage.tsx)
+- **Source**: [`web/src/pages/AccountsPage.tsx`](../web/src/pages/AccountsPage.tsx)
 
 This integration is optional. If you do not need host-injected wallets, you can remove the Accounts page without affecting the pallet or contract demos.
 
@@ -274,7 +274,7 @@ The Ethereum JSON-RPC adapter for pallet-revive. Translates standard Ethereum RP
 
 Multi-node testing framework for Polkadot/Cumulus networks. Spawns a local relay chain + parachain network for integration testing.
 
-- **Config**: [`blockchain/zombienet.toml`](blockchain/zombienet.toml) (2 relay validators + 1 collator)
+- **Config**: [`blockchain/zombienet.toml`](../blockchain/zombienet.toml) (2 relay validators + 1 collator)
 - **Docs**: [github.com/parity-tech/zombienet](https://github.com/paritytech/zombienet)
 
 ## Blockscout

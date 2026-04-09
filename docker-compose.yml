@@ -22,7 +22,7 @@ services:
   node:
     build:
       context: .
-      dockerfile: Dockerfile.node
+      dockerfile: docker/Dockerfile.node
     ports:
       - "9944:9944"
     volumes:
@@ -48,7 +48,7 @@ services:
   eth-rpc:
     build:
       context: .
-      dockerfile: Dockerfile.eth-rpc
+      dockerfile: docker/Dockerfile.eth-rpc
     ports:
       - "8545:8545"
     command: >

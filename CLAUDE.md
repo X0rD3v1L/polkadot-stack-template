@@ -102,8 +102,8 @@ docker compose up -d    # builds runtime in Docker, starts node + eth-rpc
 docker compose down -v  # tear down
 ```
 
-- `Dockerfile.node` — multi-stage: compiles runtime WASM, generates chain spec, packages into polkadot-omni-node image
-- `Dockerfile.eth-rpc` — downloads pre-built eth-rpc binary from polkadot-sdk GH release (no official Docker image exists)
+- `docker/Dockerfile.node` — multi-stage: compiles runtime WASM, generates chain spec, packages into polkadot-omni-node image
+- `docker/Dockerfile.eth-rpc` — downloads pre-built eth-rpc binary from polkadot-sdk GH release (no official Docker image exists)
 - `docker-compose.yml` (root) — full stack: node (port 9944) + eth-rpc (port 8545)
 - `blockchain/Dockerfile` — lightweight deployment image (requires pre-generated chain_spec.json)
 - `.dockerignore` — excludes web/, contracts/, target/, node_modules/ from build context
@@ -142,5 +142,5 @@ docker compose down -v  # tear down
 - **Shell script linting**: `scripts/` has ~1180 lines of bash with no linting in CI. A workflow running `shellcheck scripts/*.sh` would catch issues.
 - **deployments.json workflow**: The checked-in stub can cause merge conflicts when multiple branches deploy. Consider documenting the intended workflow or gitignoring it.
 - **E2E test speed**: `ci-e2e.yml` runs `test-zombienet.sh` (~15-25 min). Could be sped up by caching the compiled runtime binary across runs.
-- **Docker eth-rpc image**: No official `parity/eth-rpc` Docker image exists. `Dockerfile.eth-rpc` downloads the binary from GH releases as a workaround.
+- **Docker eth-rpc image**: No official `parity/eth-rpc` Docker image exists. `docker/Dockerfile.eth-rpc` downloads the binary from GH releases as a workaround.
 - **Commit message conventions**: Consider adopting Conventional Commits for clearer changelog generation.
