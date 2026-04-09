@@ -1,6 +1,6 @@
 use crate::commands::{hash_input, resolve_statement_signer, resolve_substrate_signer};
 use clap::Subcommand;
-use subxt::{utils::AccountId32, OnlineClient, PolkadotConfig};
+use subxt::{dynamic::At, OnlineClient, PolkadotConfig};
 
 #[derive(Subcommand)]
 pub enum PalletAction {
@@ -39,18 +39,19 @@ pub enum PalletAction {
 	ListClaims,
 }
 
-/// Decode a claim from raw SCALE-encoded bytes: (AccountId32, u32).
-/// AccountId32 is 32 bytes, u32 is 4 bytes little-endian. Total: 36 bytes.
-fn decode_claim(bytes: &[u8]) -> (String, String) {
-	if bytes.len() >= 36 {
-		let mut account_bytes = [0u8; 32];
-		account_bytes.copy_from_slice(&bytes[..32]);
-		let account = AccountId32::from(account_bytes);
-		let block = u32::from_le_bytes([bytes[32], bytes[33], bytes[34], bytes[35]]);
-		(account.to_string(), block.to_string())
-	} else {
-		("?".to_string(), "?".to_string())
-	}
+/// Decode a claim from a subxt dynamic value into (owner, block_number) strings.
+/// Uses runtime metadata to decode — no hardcoded byte offsets.
+fn decode_claim(value: &subxt::dynamic::DecodedValueThunk) -> (String, String) {
+	let Ok(val) = value.to_value() else {
+		return ("?".to_string(), "?".to_string());
+	};
+	let owner = val.at("owner").map(|v| format!("{v}")).unwrap_or_else(|| "?".to_string());
+	let block = val
+		.at("block_number")
+		.and_then(|v: &subxt::dynamic::Value<u32>| v.as_u128())
+		.map(|n| n.to_string())
+		.unwrap_or_else(|| "?".to_string());
+	(owner, block)
 }
 
 fn parse_hash(hex: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -123,7 +124,7 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
 			let result = api.storage().at_latest().await?.fetch(&storage_query).await?;
 			match result {
 				Some(value) => {
-					let (owner, block) = decode_claim(value.encoded());
+					let (owner, block) = decode_claim(&value);
 					println!("Claim found:");
 					println!("  Hash:  {hash}");
 					println!("  Owner: {owner}");
@@ -147,7 +148,7 @@ pub async fn run(action: PalletAction, url: &str) -> Result<(), Box<dyn std::err
 			while let Some(Ok(kv)) = results.next().await {
 				let key_len = kv.key_bytes.len();
 				let hash = format!("0x{}", hex::encode(&kv.key_bytes[key_len - 32..]));
-				let (owner, block) = decode_claim(kv.value.encoded());
+				let (owner, block) = decode_claim(&kv.value);
 
 				println!("{:<68} {:<50} {}", hash, owner, block);
 				count += 1;
