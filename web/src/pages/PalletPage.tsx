@@ -70,8 +70,8 @@ export default function PalletPage() {
 			const entries = await api.query.TemplatePallet.Claims.getEntries();
 			const result: Claim[] = entries.map((entry) => ({
 				hash: entry.keyArgs[0].asHex(),
-				owner: entry.value[0].toString(),
-				block: Number(entry.value[1]),
+				owner: entry.value.owner.toString(),
+				block: Number(entry.value.block_number),
 			}));
 			setClaims(result);
 			// Check IPFS availability in background

@@ -43,11 +43,20 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
+	/// A proof-of-existence claim: who created it and when.
+	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	#[scale_info(skip_type_params(T))]
+	pub struct Claim<T: Config> {
+		/// The account that created the claim.
+		pub owner: T::AccountId,
+		/// The block number when the claim was created.
+		pub block_number: BlockNumberFor<T>,
+	}
+
 	/// Storage for proof-of-existence claims.
-	/// Maps a 32-byte hash to the (owner, block_number) that created the claim.
+	/// Maps a 32-byte hash to the claim details (owner, block number).
 	#[pallet::storage]
-	pub type Claims<T: Config> =
-		StorageMap<_, Blake2_128Concat, H256, (T::AccountId, BlockNumberFor<T>), OptionQuery>;
+	pub type Claims<T: Config> = StorageMap<_, Blake2_128Concat, H256, Claim<T>, OptionQuery>;
 
 	/// Events emitted by this pallet.
 	#[pallet::event]
@@ -93,7 +102,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			ensure!(!Claims::<T>::contains_key(hash), Error::<T>::AlreadyClaimed);
 			let block_number = frame_system::Pallet::<T>::block_number();
-			Claims::<T>::insert(hash, (&who, block_number));
+			Claims::<T>::insert(hash, Claim { owner: who.clone(), block_number });
 			Self::deposit_event(Event::ClaimCreated { who, hash });
 			Ok(())
 		}
@@ -105,8 +114,8 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::revoke_claim())]
 		pub fn revoke_claim(origin: OriginFor<T>, hash: H256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let (owner, _) = Claims::<T>::get(hash).ok_or(Error::<T>::ClaimNotFound)?;
-			ensure!(owner == who, Error::<T>::NotClaimOwner);
+			let claim = Claims::<T>::get(hash).ok_or(Error::<T>::ClaimNotFound)?;
+			ensure!(claim.owner == who, Error::<T>::NotClaimOwner);
 			Claims::<T>::remove(hash);
 			Self::deposit_event(Event::ClaimRevoked { who, hash });
 			Ok(())

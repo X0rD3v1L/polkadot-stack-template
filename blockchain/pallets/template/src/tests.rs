@@ -11,8 +11,8 @@ fn create_claim_works() {
 		let hash = test_hash(1);
 		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
 		assert!(Claims::<Test>::contains_key(hash));
-		let (owner, _block) = Claims::<Test>::get(hash).unwrap();
-		assert_eq!(owner, 1);
+		let claim = Claims::<Test>::get(hash).unwrap();
+		assert_eq!(claim.owner, 1);
 	});
 }
 
@@ -22,8 +22,8 @@ fn create_claim_records_block_number() {
 		System::set_block_number(5);
 		let hash = test_hash(1);
 		assert_ok!(ProofOfExistence::create_claim(RuntimeOrigin::signed(1), hash));
-		let (_, block) = Claims::<Test>::get(hash).unwrap();
-		assert_eq!(block, 5);
+		let claim = Claims::<Test>::get(hash).unwrap();
+		assert_eq!(claim.block_number, 5);
 	});
 }
 

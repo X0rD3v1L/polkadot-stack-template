@@ -24,7 +24,13 @@ mod benchmarks {
 	fn revoke_claim() {
 		let caller: T::AccountId = whitelisted_caller();
 		let hash = H256::repeat_byte(1);
-		Claims::<T>::insert(&hash, (&caller, frame_system::Pallet::<T>::block_number()));
+		Claims::<T>::insert(
+			&hash,
+			Claim {
+				owner: caller.clone(),
+				block_number: frame_system::Pallet::<T>::block_number(),
+			},
+		);
 		#[extrinsic_call]
 		revoke_claim(RawOrigin::Signed(caller.clone()), hash);
 
