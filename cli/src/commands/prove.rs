@@ -1,8 +1,8 @@
+use super::ProofOfExistence;
 use crate::commands::{
 	hash_input, resolve_statement_signer, resolve_substrate_signer, submit_to_statement_store,
 	upload_to_bulletin,
 };
-use super::ProofOfExistence;
 use alloy::providers::ProviderBuilder;
 use clap::Args;
 use subxt::{OnlineClient, PolkadotConfig};

@@ -1,5 +1,5 @@
-use crate::commands::{hash_input, resolve_statement_signer, resolve_substrate_signer};
 use super::ProofOfExistence;
+use crate::commands::{hash_input, resolve_statement_signer, resolve_substrate_signer};
 use alloy::{
 	primitives::{Address, FixedBytes},
 	providers::ProviderBuilder,
