@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   check:
-    name: Fmt & compile
+    name: Fmt, compile & test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,3 +33,4 @@ jobs:
       - run: npm ci
       - run: npm run fmt:check
       - run: npm run compile
+      - run: npm test

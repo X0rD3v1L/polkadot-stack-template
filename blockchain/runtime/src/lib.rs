@@ -120,6 +120,10 @@ impl WeightToFeePolynomial for WeightToFee {
 	}
 }
 
+/// Opaque types for the node-side (non-WASM) code.
+///
+/// Re-exports block/header types with `OpaqueExtrinsic` so the node service
+/// layer can handle serialised extrinsics without full runtime type info.
 pub mod opaque {
 	use super::*;
 	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
