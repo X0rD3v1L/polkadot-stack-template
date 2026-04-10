@@ -43,7 +43,9 @@ Students do not need to use every part. Components are intentionally separated s
 - `cli/src/commands/contract.rs` — CLI contract interaction commands
 - `cli/src/commands/pallet.rs` — CLI pallet interaction commands
 - `cli/src/commands/prove.rs` — All-in-one prove command (hash + claim + optional upload)
+- `cli/src/commands/chain.rs` — CLI chain info, block subscription, Statement Store RPC
 - `scripts/common.sh` — Shared script utilities (port config, env setup)
+- `docs/INSTALL.md`, `docs/TOOLS.md`, `docs/DEPLOYMENT.md` — Setup, tooling, and deployment guides
 
 ## Build Commands
 
@@ -117,8 +119,20 @@ docker compose down -v  # tear down
 # Lightweight solo-node dev loop (no Statement Store)
 ./scripts/start-dev.sh
 
+# Local node + eth-rpc (no relay chain)
+./scripts/start-local.sh
+
 # Frontend only (for an already-running chain)
 ./scripts/start-frontend.sh
+
+# Deploy contracts to Polkadot TestNet (Paseo)
+./scripts/deploy-paseo.sh
+
+# Deploy frontend
+./scripts/deploy-frontend.sh
+
+# Statement Store smoke test
+./scripts/test-statement-store-smoke.sh
 ```
 
 ## Version Pinning
