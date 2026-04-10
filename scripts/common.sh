@@ -13,15 +13,12 @@ STACK_PORT_OFFSET="${STACK_PORT_OFFSET:-0}"
 STACK_SUBSTRATE_RPC_PORT="${STACK_SUBSTRATE_RPC_PORT:-$((9944 + STACK_PORT_OFFSET))}"
 STACK_ETH_RPC_PORT="${STACK_ETH_RPC_PORT:-$((8545 + STACK_PORT_OFFSET))}"
 STACK_FRONTEND_PORT="${STACK_FRONTEND_PORT:-$((5173 + STACK_PORT_OFFSET))}"
-STACK_COLLATOR_INTERNAL_RPC_PORT="$((9933 + STACK_PORT_OFFSET))"
 STACK_COLLATOR_P2P_PORT="$((30333 + STACK_PORT_OFFSET))"
 STACK_COLLATOR_PROMETHEUS_PORT="$((9615 + STACK_PORT_OFFSET))"
 STACK_RELAY_ALICE_RPC_PORT="$((9949 + STACK_PORT_OFFSET))"
-STACK_RELAY_ALICE_WS_PORT="$((9950 + STACK_PORT_OFFSET))"
 STACK_RELAY_ALICE_P2P_PORT="$((30335 + STACK_PORT_OFFSET))"
 STACK_RELAY_ALICE_PROMETHEUS_PORT="$((9617 + STACK_PORT_OFFSET))"
 STACK_RELAY_BOB_RPC_PORT="$((9951 + STACK_PORT_OFFSET))"
-STACK_RELAY_BOB_WS_PORT="$((9952 + STACK_PORT_OFFSET))"
 STACK_RELAY_BOB_P2P_PORT="$((30336 + STACK_PORT_OFFSET))"
 STACK_RELAY_BOB_PROMETHEUS_PORT="$((9618 + STACK_PORT_OFFSET))"
 SUBSTRATE_RPC_HTTP="${SUBSTRATE_RPC_HTTP:-http://127.0.0.1:${STACK_SUBSTRATE_RPC_PORT}}"
@@ -131,28 +128,22 @@ validate_zombienet_ports() {
     require_distinct_ports \
         "Substrate RPC" "$STACK_SUBSTRATE_RPC_PORT" \
         "Relay Alice RPC" "$STACK_RELAY_ALICE_RPC_PORT" \
-        "Relay Alice WS" "$STACK_RELAY_ALICE_WS_PORT" \
         "Relay Alice P2P" "$STACK_RELAY_ALICE_P2P_PORT" \
         "Relay Alice Prometheus" "$STACK_RELAY_ALICE_PROMETHEUS_PORT" \
         "Relay Bob RPC" "$STACK_RELAY_BOB_RPC_PORT" \
-        "Relay Bob WS" "$STACK_RELAY_BOB_WS_PORT" \
         "Relay Bob P2P" "$STACK_RELAY_BOB_P2P_PORT" \
         "Relay Bob Prometheus" "$STACK_RELAY_BOB_PROMETHEUS_PORT" \
-        "Collator internal RPC" "$STACK_COLLATOR_INTERNAL_RPC_PORT" \
         "Collator P2P" "$STACK_COLLATOR_P2P_PORT" \
         "Collator Prometheus" "$STACK_COLLATOR_PROMETHEUS_PORT"
 
     require_ports_free \
         "$STACK_SUBSTRATE_RPC_PORT" \
         "$STACK_RELAY_ALICE_RPC_PORT" \
-        "$STACK_RELAY_ALICE_WS_PORT" \
         "$STACK_RELAY_ALICE_P2P_PORT" \
         "$STACK_RELAY_ALICE_PROMETHEUS_PORT" \
         "$STACK_RELAY_BOB_RPC_PORT" \
-        "$STACK_RELAY_BOB_WS_PORT" \
         "$STACK_RELAY_BOB_P2P_PORT" \
         "$STACK_RELAY_BOB_PROMETHEUS_PORT" \
-        "$STACK_COLLATOR_INTERNAL_RPC_PORT" \
         "$STACK_COLLATOR_P2P_PORT" \
         "$STACK_COLLATOR_PROMETHEUS_PORT"
 }
@@ -163,14 +154,11 @@ validate_full_stack_ports() {
         "Ethereum RPC" "$STACK_ETH_RPC_PORT" \
         "Frontend" "$STACK_FRONTEND_PORT" \
         "Relay Alice RPC" "$STACK_RELAY_ALICE_RPC_PORT" \
-        "Relay Alice WS" "$STACK_RELAY_ALICE_WS_PORT" \
         "Relay Alice P2P" "$STACK_RELAY_ALICE_P2P_PORT" \
         "Relay Alice Prometheus" "$STACK_RELAY_ALICE_PROMETHEUS_PORT" \
         "Relay Bob RPC" "$STACK_RELAY_BOB_RPC_PORT" \
-        "Relay Bob WS" "$STACK_RELAY_BOB_WS_PORT" \
         "Relay Bob P2P" "$STACK_RELAY_BOB_P2P_PORT" \
         "Relay Bob Prometheus" "$STACK_RELAY_BOB_PROMETHEUS_PORT" \
-        "Collator internal RPC" "$STACK_COLLATOR_INTERNAL_RPC_PORT" \
         "Collator P2P" "$STACK_COLLATOR_P2P_PORT" \
         "Collator Prometheus" "$STACK_COLLATOR_PROMETHEUS_PORT"
 
@@ -179,14 +167,11 @@ validate_full_stack_ports() {
         "$STACK_ETH_RPC_PORT" \
         "$STACK_FRONTEND_PORT" \
         "$STACK_RELAY_ALICE_RPC_PORT" \
-        "$STACK_RELAY_ALICE_WS_PORT" \
         "$STACK_RELAY_ALICE_P2P_PORT" \
         "$STACK_RELAY_ALICE_PROMETHEUS_PORT" \
         "$STACK_RELAY_BOB_RPC_PORT" \
-        "$STACK_RELAY_BOB_WS_PORT" \
         "$STACK_RELAY_BOB_P2P_PORT" \
         "$STACK_RELAY_BOB_PROMETHEUS_PORT" \
-        "$STACK_COLLATOR_INTERNAL_RPC_PORT" \
         "$STACK_COLLATOR_P2P_PORT" \
         "$STACK_COLLATOR_PROMETHEUS_PORT"
 }
@@ -342,7 +327,6 @@ default_command = "polkadot"
   [[relaychain.nodes]]
   name = "alice"
   validator = true
-  ws_port = $STACK_RELAY_ALICE_WS_PORT
   rpc_port = $STACK_RELAY_ALICE_RPC_PORT
   p2p_port = $STACK_RELAY_ALICE_P2P_PORT
   prometheus_port = $STACK_RELAY_ALICE_PROMETHEUS_PORT
@@ -350,7 +334,6 @@ default_command = "polkadot"
   [[relaychain.nodes]]
   name = "bob"
   validator = true
-  ws_port = $STACK_RELAY_BOB_WS_PORT
   rpc_port = $STACK_RELAY_BOB_RPC_PORT
   p2p_port = $STACK_RELAY_BOB_P2P_PORT
   prometheus_port = $STACK_RELAY_BOB_PROMETHEUS_PORT
@@ -363,8 +346,7 @@ cumulus_based = true
   [[parachains.collators]]
   name = "collator-01"
   validator = true
-  ws_port = $STACK_SUBSTRATE_RPC_PORT
-  rpc_port = $STACK_COLLATOR_INTERNAL_RPC_PORT
+  rpc_port = $STACK_SUBSTRATE_RPC_PORT
   p2p_port = $STACK_COLLATOR_P2P_PORT
   prometheus_port = $STACK_COLLATOR_PROMETHEUS_PORT
   command = "polkadot-omni-node"
