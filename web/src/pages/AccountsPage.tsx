@@ -361,7 +361,8 @@ export default function AccountsPage() {
 				)}
 				{spektrStatus === "failed" && (
 					<p className="text-sm text-accent-red">
-						Failed to connect to Polkadot Host. The host environment may not be available.
+						Failed to connect to Polkadot Host. The host environment may not be
+						available.
 					</p>
 				)}
 				{spektrStatus === "connected" && (
@@ -381,9 +382,7 @@ export default function AccountsPage() {
 								}}
 								info={accountInfos[acc.address]}
 								badge={typeBadge.spektr}
-								onFund={() =>
-									fundAccount(acc.address, acc.name || "Host account")
-								}
+								onFund={() => fundAccount(acc.address, acc.name || "Host account")}
 								connected={connected}
 							/>
 						))}
