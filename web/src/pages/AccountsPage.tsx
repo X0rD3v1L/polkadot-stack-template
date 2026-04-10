@@ -284,7 +284,7 @@ export default function AccountsPage() {
 		},
 		spektr: {
 			className: "bg-polka-500/10 text-polka-400 border border-polka-500/20",
-			label: "Spektr",
+			label: "Host",
 		},
 	};
 
@@ -293,8 +293,8 @@ export default function AccountsPage() {
 			<div className="space-y-2">
 				<h1 className="page-title text-polka-400">Accounts</h1>
 				<p className="text-text-secondary">
-					Manage dev accounts, connect browser extension wallets, or use Spektr accounts
-					from the Polkadot host. Fund accounts using Sudo on the dev chain.
+					Manage dev accounts, connect browser extension wallets, or use Polkadot Host
+					accounts. Fund accounts using Sudo on the dev chain.
 				</p>
 			</div>
 
@@ -342,48 +342,39 @@ export default function AccountsPage() {
 				</div>
 			</div>
 
-			{/* Spektr Accounts (Polkadot Host) */}
+			{/* Polkadot Host Accounts */}
 			<div className="card space-y-4">
-				<h2 className="section-title">Spektr (Polkadot Host)</h2>
+				<h2 className="section-title">Polkadot Host Accounts</h2>
 				{spektrStatus === "detecting" && (
 					<p className="text-sm text-accent-yellow">
 						Detecting Polkadot host environment...
 					</p>
 				)}
 				{spektrStatus === "injecting" && (
-					<p className="text-sm text-accent-yellow">Injecting Spektr extension...</p>
+					<p className="text-sm text-accent-yellow">Connecting to Polkadot Host...</p>
 				)}
 				{spektrStatus === "unavailable" && (
 					<p className="text-sm text-text-muted">
-						Not running inside a Polkadot host (Desktop or Web). Spektr accounts are
-						only available when loaded through the{" "}
-						<a
-							href="https://polkadot.com"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="text-polka-400 underline hover:text-polka-300"
-						>
-							Polkadot app
-						</a>
-						.
+						Not running inside a Polkadot Host. These accounts are only available when
+						this app is loaded through a Polkadot Host client.
 					</p>
 				)}
 				{spektrStatus === "failed" && (
 					<p className="text-sm text-accent-red">
-						Failed to connect to Spektr. The host may not have injected the extension.
+						Failed to connect to Polkadot Host. The host environment may not be available.
 					</p>
 				)}
 				{spektrStatus === "connected" && (
 					<div className="space-y-3">
 						<p className="text-sm text-accent-green font-medium">
-							Connected to Spektr ({spektrAccounts.length} account
+							Connected to Polkadot Host ({spektrAccounts.length} account
 							{spektrAccounts.length !== 1 ? "s" : ""})
 						</p>
 						{spektrAccounts.map((acc) => (
 							<AccountCard
 								key={acc.address}
 								account={{
-									name: acc.name || "Spektr Account",
+									name: acc.name || "Host Account",
 									ss58: acc.address,
 									eth: ss58ToH160(acc.address),
 									type: "spektr",
@@ -391,7 +382,7 @@ export default function AccountsPage() {
 								info={accountInfos[acc.address]}
 								badge={typeBadge.spektr}
 								onFund={() =>
-									fundAccount(acc.address, acc.name || "Spektr account")
+									fundAccount(acc.address, acc.name || "Host account")
 								}
 								connected={connected}
 							/>
