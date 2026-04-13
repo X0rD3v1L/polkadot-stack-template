@@ -79,6 +79,50 @@ sudo mv polkadot /usr/local/bin/
 cargo install --git https://github.com/paritytech/polkadot-sdk --tag polkadot-stable2512-3 polkadot --locked
 ```
 
+### Polkadot Prepare Worker
+
+Required by the `polkadot` relay chain binary. Must be installed in the same directory and match the same SDK release.
+
+Download the prebuilt binary for your platform from:
+
+https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3
+
+**macOS (Apple Silicon):**
+```bash
+curl -L https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2512-3/polkadot-prepare-worker-aarch64-apple-darwin -o polkadot-prepare-worker
+chmod +x polkadot-prepare-worker
+sudo mv polkadot-prepare-worker /usr/local/bin/
+```
+
+**Linux (x86_64):**
+```bash
+curl -L https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2512-3/polkadot-prepare-worker -o polkadot-prepare-worker
+chmod +x polkadot-prepare-worker
+sudo mv polkadot-prepare-worker /usr/local/bin/
+```
+
+### Polkadot Execute Worker
+
+Required by the `polkadot` relay chain binary. Must be installed in the same directory and match the same SDK release.
+
+Download the prebuilt binary for your platform from:
+
+https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3
+
+**macOS (Apple Silicon):**
+```bash
+curl -L https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2512-3/polkadot-execute-worker-aarch64-apple-darwin -o polkadot-execute-worker
+chmod +x polkadot-execute-worker
+sudo mv polkadot-execute-worker /usr/local/bin/
+```
+
+**Linux (x86_64):**
+```bash
+curl -L https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2512-3/polkadot-execute-worker -o polkadot-execute-worker
+chmod +x polkadot-execute-worker
+sudo mv polkadot-execute-worker /usr/local/bin/
+```
+
 ### Polkadot Omni Node
 
 The local dev chain runs on `polkadot-omni-node`. **You must use the version matching the SDK release (stable2512-3).**
@@ -388,6 +432,10 @@ Each contract directory has a `tsconfig.json` that avoids the TypeScript 7.0 dep
 ### Statement Store RPCs not available
 
 In polkadot-sdk stable2512-3, `--enable-statement-store` is silently ignored in dev mode (`--dev` or `--dev-block-time`). The dev code path returns early before the statement store configuration is consumed. Use `./scripts/start-all.sh` or `./scripts/start-local.sh` instead — those run a relay chain + collator where the statement store works correctly.
+
+### "Worker binaries could not be found"
+
+The `polkadot` binary requires `polkadot-prepare-worker` and `polkadot-execute-worker` to be installed in the same directory. Without them the relay chain validators crash immediately on startup. Download both from the [stable2512-3 release](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3) and place them in `/usr/local/bin/`.
 
 ### Parachain stalls at block 0 on Zombienet
 

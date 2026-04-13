@@ -36,6 +36,8 @@ Only Node.js is needed on the host. The Docker build compiles the Rust runtime a
 - **Rust** (stable, installed via [rustup](https://rustup.rs/))
 - **Node.js** 22.x LTS (`22.5+` recommended) and npm v10.9.0+
 - **polkadot** v1.21.3 ([download](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3)) for the local relay chain
+- **polkadot-prepare-worker** v1.21.3 ([download](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3)) - required by polkadot
+- **polkadot-execute-worker** v1.21.3 ([download](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3)) - required by polkadot
 - **polkadot-omni-node** v1.21.3 ([download](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3))
 - **eth-rpc** v0.12.0 ([download](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3)) - Ethereum JSON-RPC adapter
 - **zombienet** v1.3.138 (`npm install -g @zombienet/cli`) for the local relay-chain + collator topology
