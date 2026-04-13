@@ -115,6 +115,8 @@ chmod +x polkadot-prepare-worker
 sudo mv polkadot-prepare-worker /usr/local/bin/
 ```
 
+**Build from source:** Building `polkadot` from source (see above) produces all three binaries (`polkadot`, `polkadot-prepare-worker`, `polkadot-execute-worker`).
+
 ### Polkadot Execute Worker
 
 Required by the `polkadot` relay chain binary. Must be installed in the same directory and match the same SDK release.
@@ -136,6 +138,8 @@ curl -L https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-st
 chmod +x polkadot-execute-worker
 sudo mv polkadot-execute-worker /usr/local/bin/
 ```
+
+**Build from source:** Building `polkadot` from source (see above) produces all three binaries (`polkadot`, `polkadot-prepare-worker`, `polkadot-execute-worker`).
 
 ### Polkadot Omni Node
 
