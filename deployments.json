@@ -1,4 +1,9 @@
 {
-  "evm": null,
-  "pvm": null
+  "evm": "0xc01ee7f10ea4af4673cfff62710e1d7792aba8f3",
+  "pvm": "0x970951a12f975e6762482aca81e57d5a2a4e73f4",
+  "verifier": "0x006d6dcc857c13ee747b2b8981f8bcded885e927",
+  "anonDigiLocker": "0xc3411536e1139de3df14e68b2538ab456ba58702",
+  "panAttester": "0xadeeaa7a41ef851a1edc691b5e399305bdff77e4",
+  "attestationRegistry": "0x4d018c530e01bbc98b042a18a4d4090658bcd8f3",
+  "schema": "0x1f70926f006bbe27dee4902c852a268b648b358bebc8eeb42e524004752ead18"
 }
