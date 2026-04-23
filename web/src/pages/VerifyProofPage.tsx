@@ -9,674 +9,875 @@ const ATTESTATION_REGISTRY = "0x4d018c530e01bbc98b042a18a4d4090658bcd8f3" as con
 const SCHEMA = "0x1f70926f006bbe27dee4902c852a268b648b358bebc8eeb42e524004752ead18" as const;
 
 const paseoAssetHub = {
-  id: 420420417,
-  name: "Paseo Asset Hub",
-  nativeCurrency: { name: "PAS", symbol: "PAS", decimals: 18 },
-  rpcUrls: { default: { http: [RPC_URL] } },
+	id: 420420417,
+	name: "Paseo Asset Hub",
+	nativeCurrency: { name: "PAS", symbol: "PAS", decimals: 18 },
+	rpcUrls: { default: { http: [RPC_URL] } },
 } as const;
 
 const PAN_ATTESTER_ABI = [
-  {
-    name: "verifyAndAttest", type: "function", stateMutability: "nonpayable",
-    inputs: [
-      { name: "nullifier", type: "uint256" }, { name: "documentType", type: "uint256" },
-      { name: "reveal", type: "uint256" }, { name: "signal", type: "uint256" },
-      { name: "groth16Proof", type: "uint256[8]" },
-    ], outputs: [],
-  },
-  {
-    name: "hasValidAttestation", type: "function", stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }], outputs: [{ type: "bool" }],
-  },
-  {
-    name: "isNullifierUsed", type: "function", stateMutability: "view",
-    inputs: [{ name: "nullifier", type: "uint256" }], outputs: [{ type: "bool" }],
-  },
-  {
-    name: "getNullifierByAddress", type: "function", stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }], outputs: [{ type: "uint256" }],
-  },
+	{
+		name: "verifyAndAttest",
+		type: "function",
+		stateMutability: "nonpayable",
+		inputs: [
+			{ name: "nullifier", type: "uint256" },
+			{ name: "documentType", type: "uint256" },
+			{ name: "reveal", type: "uint256" },
+			{ name: "signal", type: "uint256" },
+			{ name: "groth16Proof", type: "uint256[8]" },
+		],
+		outputs: [],
+	},
+	{
+		name: "hasValidAttestation",
+		type: "function",
+		stateMutability: "view",
+		inputs: [{ name: "user", type: "address" }],
+		outputs: [{ type: "bool" }],
+	},
+	{
+		name: "isNullifierUsed",
+		type: "function",
+		stateMutability: "view",
+		inputs: [{ name: "nullifier", type: "uint256" }],
+		outputs: [{ type: "bool" }],
+	},
+	{
+		name: "getNullifierByAddress",
+		type: "function",
+		stateMutability: "view",
+		inputs: [{ name: "user", type: "address" }],
+		outputs: [{ type: "uint256" }],
+	},
 ] as const;
 
 const REGISTRY_ABI = [
-  {
-    name: "isValid", type: "function", stateMutability: "view",
-    inputs: [
-      { name: "subject", type: "address" }, { name: "schema", type: "bytes32" },
-      { name: "attester", type: "address" },
-    ], outputs: [{ type: "bool" }],
-  },
+	{
+		name: "isValid",
+		type: "function",
+		stateMutability: "view",
+		inputs: [
+			{ name: "subject", type: "address" },
+			{ name: "schema", type: "bytes32" },
+			{ name: "attester", type: "address" },
+		],
+		outputs: [{ type: "bool" }],
+	},
 ] as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ProofData {
-  proof: { pi_a: string[]; pi_b: string[][]; pi_c: string[] };
-  publicSignals: string[];
+	proof: { pi_a: string[]; pi_b: string[][]; pi_c: string[] };
+	publicSignals: string[];
 }
 
 interface CheckResult {
-  hasAttestation: boolean;
-  isValid: boolean;
-  nullifier: bigint;
+	hasAttestation: boolean;
+	isValid: boolean;
+	nullifier: bigint;
 }
 
 type Step = "idle" | "checking" | "submitting" | "done" | "error";
 
 interface DetectedWallet {
-  id: string;
-  name: string;
-  icon: string;
-  provider: () => any;
-  installed: boolean;
+	id: string;
+	name: string;
+	icon: string;
+	provider: () => any;
+	installed: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function packGroth16Proof(
-  p: ProofData["proof"]
+	p: ProofData["proof"],
 ): readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint] {
-  return [
-    BigInt(p.pi_a[0]), BigInt(p.pi_a[1]),
-    BigInt(p.pi_b[0][1]), BigInt(p.pi_b[0][0]),
-    BigInt(p.pi_b[1][1]), BigInt(p.pi_b[1][0]),
-    BigInt(p.pi_c[0]), BigInt(p.pi_c[1]),
-  ];
+	return [
+		BigInt(p.pi_a[0]),
+		BigInt(p.pi_a[1]),
+		BigInt(p.pi_b[0][1]),
+		BigInt(p.pi_b[0][0]),
+		BigInt(p.pi_b[1][1]),
+		BigInt(p.pi_b[1][0]),
+		BigInt(p.pi_c[0]),
+		BigInt(p.pi_c[1]),
+	];
 }
 
 function decodePackedBytes(val: string): string {
-  try {
-    let n = BigInt(val);
-    if (n === 0n) return "—";
-    let r = "";
-    while (n > 0n) {
-      const c = Number(n & 0xffn);
-      if (c > 31 && c < 127) r = r + String.fromCharCode(c);
-      n >>= 8n;
-    }
-    return r || val;
-  } catch { return val; }
+	try {
+		let n = BigInt(val);
+		if (n === 0n) return "—";
+		let r = "";
+		while (n > 0n) {
+			const c = Number(n & 0xffn);
+			if (c > 31 && c < 127) r = r + String.fromCharCode(c);
+			n >>= 8n;
+		}
+		return r || val;
+	} catch {
+		return val;
+	}
 }
 
 function getPublicClient() {
-  return createPublicClient({ transport: http(RPC_URL), chain: paseoAssetHub as any });
+	return createPublicClient({ transport: http(RPC_URL), chain: paseoAssetHub as any });
 }
 
 function detectWallets(): DetectedWallet[] {
-  const eth = (window as any).ethereum;
-  const wallets: DetectedWallet[] = [
-    {
-      id: "metamask", name: "MetaMask", icon: "🦊",
-      provider: () => eth?.providers?.find((p: any) => p.isMetaMask) ?? (eth?.isMetaMask ? eth : null),
-      installed: !!(eth?.isMetaMask || eth?.providers?.some((p: any) => p.isMetaMask)),
-    },
-    {
-      id: "talisman", name: "Talisman", icon: "🔮",
-      provider: () => eth?.providers?.find((p: any) => p.isTalisman) ?? (eth?.isTalisman ? eth : null),
-      installed: !!(eth?.isTalisman || eth?.providers?.some((p: any) => p.isTalisman)),
-    },
-    {
-      id: "subwallet", name: "SubWallet", icon: "🪐",
-      provider: () => eth?.providers?.find((p: any) => p.isSubWallet) ?? (eth?.isSubWallet ? eth : null),
-      installed: !!(eth?.isSubWallet || eth?.providers?.some((p: any) => p.isSubWallet)),
-    },
-    {
-      id: "injected", name: "Browser Wallet", icon: "🌐",
-      provider: () => eth,
-      installed: !!eth,
-    },
-  ];
-  const hasSpecific = wallets.slice(0, 3).some((w) => w.installed);
-  return wallets.filter((w) => w.id !== "injected" || !hasSpecific);
+	const eth = (window as any).ethereum;
+	const wallets: DetectedWallet[] = [
+		{
+			id: "metamask",
+			name: "MetaMask",
+			icon: "🦊",
+			provider: () =>
+				eth?.providers?.find((p: any) => p.isMetaMask) ?? (eth?.isMetaMask ? eth : null),
+			installed: !!(eth?.isMetaMask || eth?.providers?.some((p: any) => p.isMetaMask)),
+		},
+		{
+			id: "talisman",
+			name: "Talisman",
+			icon: "🔮",
+			provider: () =>
+				eth?.providers?.find((p: any) => p.isTalisman) ?? (eth?.isTalisman ? eth : null),
+			installed: !!(eth?.isTalisman || eth?.providers?.some((p: any) => p.isTalisman)),
+		},
+		{
+			id: "subwallet",
+			name: "SubWallet",
+			icon: "🪐",
+			provider: () =>
+				eth?.providers?.find((p: any) => p.isSubWallet) ?? (eth?.isSubWallet ? eth : null),
+			installed: !!(eth?.isSubWallet || eth?.providers?.some((p: any) => p.isSubWallet)),
+		},
+		{
+			id: "injected",
+			name: "Browser Wallet",
+			icon: "🌐",
+			provider: () => eth,
+			installed: !!eth,
+		},
+	];
+	const hasSpecific = wallets.slice(0, 3).some((w) => w.installed);
+	return wallets.filter((w) => w.id !== "injected" || !hasSpecific);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function VerifyProofPage() {
-  const fileRef = useRef<HTMLInputElement>(null);
+	const fileRef = useRef<HTMLInputElement>(null);
 
-  // Proof state
-  const [proofData, setProofData] = useState<ProofData | null>(null);
-  const [fileName, setFileName] = useState("");
-  const [dragging, setDragging] = useState(false);
+	// Proof state
+	const [proofData, setProofData] = useState<ProofData | null>(null);
+	const [fileName, setFileName] = useState("");
+	const [dragging, setDragging] = useState(false);
 
-  // Wallet state
-  const [address, setAddress] = useState<string | null>(null);
-  const [showWalletModal, setShowWalletModal] = useState(false);
-  const [wallets, setWallets] = useState<DetectedWallet[]>([]);
-  const [connecting, setConnecting] = useState<string | null>(null);
+	// Wallet state
+	const [address, setAddress] = useState<string | null>(null);
+	const [showWalletModal, setShowWalletModal] = useState(false);
+	const [wallets, setWallets] = useState<DetectedWallet[]>([]);
+	const [connecting, setConnecting] = useState<string | null>(null);
 
-  // Check / submit state
-  const [step, setStep] = useState<Step>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [checkResult, setCheckResult] = useState<CheckResult | null>(null);
-  const [checkedAddr, setCheckedAddr] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
+	// Check / submit state
+	const [step, setStep] = useState<Step>("idle");
+	const [error, setError] = useState<string | null>(null);
+	const [checkResult, setCheckResult] = useState<CheckResult | null>(null);
+	const [checkedAddr, setCheckedAddr] = useState<string | null>(null);
+	const [txHash, setTxHash] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (showWalletModal) setWallets(detectWallets());
-  }, [showWalletModal]);
+	useEffect(() => {
+		if (showWalletModal) setWallets(detectWallets());
+	}, [showWalletModal]);
 
-  // ── File handling ───────────────────────────────────────────────────────────
-  const handleFile = useCallback(async (file: File) => {
-    try {
-      const data = JSON.parse(await file.text()) as ProofData;
-      if (!data.proof || !data.publicSignals) throw new Error("Missing proof or publicSignals");
-      setProofData(data);
-      setFileName(file.name);
-      setStep("idle");
-      setError(null);
-      setCheckResult(null);
-      setTxHash(null);
-    } catch (e: any) {
-      setError("Invalid proof file: " + e.message);
-    }
-  }, []);
+	// ── File handling ───────────────────────────────────────────────────────────
+	const handleFile = useCallback(async (file: File) => {
+		try {
+			const data = JSON.parse(await file.text()) as ProofData;
+			if (!data.proof || !data.publicSignals)
+				throw new Error("Missing proof or publicSignals");
+			setProofData(data);
+			setFileName(file.name);
+			setStep("idle");
+			setError(null);
+			setCheckResult(null);
+			setTxHash(null);
+		} catch (e: any) {
+			setError("Invalid proof file: " + e.message);
+		}
+	}, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-  }, [handleFile]);
+	const handleDrop = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			setDragging(false);
+			if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+		},
+		[handleFile],
+	);
 
-  // ── Wallet connection ───────────────────────────────────────────────────────
-  const connectWallet = useCallback(async (wallet: DetectedWallet) => {
-    setConnecting(wallet.id);
-    try {
-      const provider = wallet.provider();
-      if (!provider) throw new Error(`${wallet.name} not detected`);
-      const accounts = await provider.request({ method: "eth_requestAccounts" });
-      if (!accounts?.length) throw new Error("No accounts returned");
-      setAddress(accounts[0]);
-      setShowWalletModal(false);
-    } catch (e: any) {
-      setError(e.message || "Connection failed");
-    } finally {
-      setConnecting(null);
-    }
-  }, []);
+	// ── Wallet connection ───────────────────────────────────────────────────────
+	const connectWallet = useCallback(async (wallet: DetectedWallet) => {
+		setConnecting(wallet.id);
+		try {
+			const provider = wallet.provider();
+			if (!provider) throw new Error(`${wallet.name} not detected`);
+			const accounts = await provider.request({ method: "eth_requestAccounts" });
+			if (!accounts?.length) throw new Error("No accounts returned");
+			setAddress(accounts[0]);
+			setShowWalletModal(false);
+		} catch (e: any) {
+			setError(e.message || "Connection failed");
+		} finally {
+			setConnecting(null);
+		}
+	}, []);
 
-  const disconnect = () => {
-    setAddress(null);
-    setStep("idle");
-    setCheckResult(null);
-    setCheckedAddr(null);
-    setTxHash(null);
-    setError(null);
-  };
+	const disconnect = () => {
+		setAddress(null);
+		setStep("idle");
+		setCheckResult(null);
+		setCheckedAddr(null);
+		setTxHash(null);
+		setError(null);
+	};
 
-  // ── Check attestation — mirrors verify-pan.ts checks [1][2][3] ─────────────
-  const handleCheck = useCallback(async (addr: string) => {
-    setStep("checking");
-    setError(null);
-    setCheckedAddr(addr);
-    try {
-      const client = getPublicClient();
-      const a = addr as `0x${string}`;
+	// ── Check attestation — mirrors verify-pan.ts checks [1][2][3] ─────────────
+	const handleCheck = useCallback(async (addr: string) => {
+		setStep("checking");
+		setError(null);
+		setCheckedAddr(addr);
+		try {
+			const client = getPublicClient();
+			const a = addr as `0x${string}`;
 
-      const [hasAttestation, isValid, nullifier] = await Promise.all([
-        client.readContract({
-          address: PAN_ATTESTER_ADDRESS, abi: PAN_ATTESTER_ABI,
-          functionName: "hasValidAttestation", args: [a],
-        }) as Promise<boolean>,
-        client.readContract({
-          address: ATTESTATION_REGISTRY, abi: REGISTRY_ABI,
-          functionName: "isValid", args: [a, SCHEMA, PAN_ATTESTER_ADDRESS],
-        }) as Promise<boolean>,
-        client.readContract({
-          address: PAN_ATTESTER_ADDRESS, abi: PAN_ATTESTER_ABI,
-          functionName: "getNullifierByAddress", args: [a],
-        }) as Promise<bigint>,
-      ]);
+			const [hasAttestation, isValid, nullifier] = await Promise.all([
+				client.readContract({
+					address: PAN_ATTESTER_ADDRESS,
+					abi: PAN_ATTESTER_ABI,
+					functionName: "hasValidAttestation",
+					args: [a],
+				}) as Promise<boolean>,
+				client.readContract({
+					address: ATTESTATION_REGISTRY,
+					abi: REGISTRY_ABI,
+					functionName: "isValid",
+					args: [a, SCHEMA, PAN_ATTESTER_ADDRESS],
+				}) as Promise<boolean>,
+				client.readContract({
+					address: PAN_ATTESTER_ADDRESS,
+					abi: PAN_ATTESTER_ABI,
+					functionName: "getNullifierByAddress",
+					args: [a],
+				}) as Promise<bigint>,
+			]);
 
-      setCheckResult({ hasAttestation, isValid, nullifier });
-      setStep("done");
-    } catch (e: any) {
-      setError(
-        e.message?.includes("fetch")
-          ? `Cannot connect to Paseo. Check network.`
-          : e.message || "Check failed"
-      );
-      setStep("error");
-    }
-  }, []);
+			setCheckResult({ hasAttestation, isValid, nullifier });
+			setStep("done");
+		} catch (e: any) {
+			setError(
+				e.message?.includes("fetch")
+					? `Cannot connect to Paseo. Check network.`
+					: e.message || "Check failed",
+			);
+			setStep("error");
+		}
+	}, []);
 
-  // ── Submit proof on-chain — mirrors verify-pan.ts PROOF_FILE flow ──────────
-  const handleSubmit = useCallback(async () => {
-    if (!proofData || !address) return;
-    setStep("submitting");
-    setError(null);
-    try {
-      const publicClient = getPublicClient();
-      const proofNullifier = BigInt(proofData.publicSignals[1]);
+	// ── Submit proof on-chain — mirrors verify-pan.ts PROOF_FILE flow ──────────
+	const handleSubmit = useCallback(async () => {
+		if (!proofData || !address) return;
+		setStep("submitting");
+		setError(null);
+		try {
+			const publicClient = getPublicClient();
+			const proofNullifier = BigInt(proofData.publicSignals[1]);
 
-      // Check nullifier not already used
-      const nullifierUsed = await publicClient.readContract({
-        address: PAN_ATTESTER_ADDRESS, abi: PAN_ATTESTER_ABI,
-        functionName: "isNullifierUsed", args: [proofNullifier],
-      }) as boolean;
+			// Check nullifier not already used
+			const nullifierUsed = (await publicClient.readContract({
+				address: PAN_ATTESTER_ADDRESS,
+				abi: PAN_ATTESTER_ABI,
+				functionName: "isNullifierUsed",
+				args: [proofNullifier],
+			})) as boolean;
 
-      if (nullifierUsed) {
-        setError("⚠️ Nullifier already used — this PAN was already attested");
-        setStep("error");
-        return;
-      }
+			if (nullifierUsed) {
+				setError("⚠️ Nullifier already used — this PAN was already attested");
+				setStep("error");
+				return;
+			}
 
-      const eth = (window as any).ethereum;
-      if (!eth) throw new Error("No EVM wallet found. Connect MetaMask or Talisman EVM mode.");
+			const eth = (window as any).ethereum;
+			if (!eth)
+				throw new Error("No EVM wallet found. Connect MetaMask or Talisman EVM mode.");
 
-      const walletClient = createWalletClient({
-        transport: custom(eth),
-        chain: paseoAssetHub as any,
-      });
+			const walletClient = createWalletClient({
+				transport: custom(eth),
+				chain: paseoAssetHub as any,
+			});
 
-      const hash = await walletClient.writeContract({
-        address: PAN_ATTESTER_ADDRESS,
-        abi: PAN_ATTESTER_ABI,
-        functionName: "verifyAndAttest",
-        args: [
-          proofNullifier,
-          BigInt(proofData.publicSignals[2]),
-          BigInt(proofData.publicSignals[3]),
-          1n,
-          packGroth16Proof(proofData.proof),
-        ],
-        account: address as `0x${string}`,
-        chain: paseoAssetHub as any,
-      });
+			const hash = await walletClient.writeContract({
+				address: PAN_ATTESTER_ADDRESS,
+				abi: PAN_ATTESTER_ABI,
+				functionName: "verifyAndAttest",
+				args: [
+					proofNullifier,
+					BigInt(proofData.publicSignals[2]),
+					BigInt(proofData.publicSignals[3]),
+					1n,
+					packGroth16Proof(proofData.proof),
+				],
+				account: address as `0x${string}`,
+				chain: paseoAssetHub as any,
+			});
 
-      setTxHash(hash);
-      await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+			setTxHash(hash);
+			await publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
 
-      // Re-run all 3 checks after submission
-      await handleCheck(address);
-    } catch (e: any) {
-      setError(e.message || "Transaction failed");
-      setStep("error");
-    }
-  }, [proofData, address, handleCheck]);
+			// Re-run all 3 checks after submission
+			await handleCheck(address);
+		} catch (e: any) {
+			setError(e.message || "Transaction failed");
+			setStep("error");
+		}
+	}, [proofData, address, handleCheck]);
 
-  const pub = proofData?.publicSignals;
-  const shortAddr = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "";
-  const isChecked = checkResult && step !== "checking" && step !== "submitting";
+	const pub = proofData?.publicSignals;
+	const shortAddr = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "";
+	const isChecked = checkResult && step !== "checking" && step !== "submitting";
 
-  return (
-    <>
-      <style>{CSS}</style>
+	return (
+		<>
+			<style>{CSS}</style>
 
-      {/* ── Wallet modal ──────────────────────────────────────────────────── */}
-      {showWalletModal && (
-        <div className="vfy-modal-backdrop" onClick={() => setShowWalletModal(false)}>
-          <div className="vfy-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="vfy-modal-header">
-              <span className="vfy-modal-title">Connect Wallet</span>
-              <button className="vfy-modal-close" onClick={() => setShowWalletModal(false)}>✕</button>
-            </div>
-            <p className="vfy-modal-sub">Select a wallet to check and submit attestations</p>
-            <div className="vfy-wallet-list">
-              {wallets.length === 0 && (
-                <div className="vfy-no-wallet">
-                  No EVM wallet detected.<br />
-                  Install <a href="https://metamask.io" target="_blank" rel="noreferrer">MetaMask</a> or{" "}
-                  <a href="https://talisman.xyz" target="_blank" rel="noreferrer">Talisman</a>.
-                </div>
-              )}
-              {wallets.map((w) => (
-                <button
-                  key={w.id}
-                  className={`vfy-wallet-btn${!w.installed ? " vfy-wallet-disabled" : ""}`}
-                  onClick={() => w.installed && connectWallet(w)}
-                  disabled={!w.installed || connecting === w.id}
-                >
-                  <span className="vfy-wallet-icon">{w.icon}</span>
-                  <span className="vfy-wallet-name">{w.name}</span>
-                  {!w.installed && <span className="vfy-badge">Not installed</span>}
-                  {connecting === w.id && <span className="vfy-badge">Connecting…</span>}
-                  {w.installed && connecting !== w.id && <span className="vfy-wallet-arrow">→</span>}
-                </button>
-              ))}
-            </div>
-            <p className="vfy-modal-note">Paseo Asset Hub · Chain ID 420420417</p>
-          </div>
-        </div>
-      )}
+			{/* ── Wallet modal ──────────────────────────────────────────────────── */}
+			{showWalletModal && (
+				<div className="vfy-modal-backdrop" onClick={() => setShowWalletModal(false)}>
+					<div className="vfy-modal" onClick={(e) => e.stopPropagation()}>
+						<div className="vfy-modal-header">
+							<span className="vfy-modal-title">Connect Wallet</span>
+							<button
+								className="vfy-modal-close"
+								onClick={() => setShowWalletModal(false)}
+							>
+								✕
+							</button>
+						</div>
+						<p className="vfy-modal-sub">
+							Select a wallet to check and submit attestations
+						</p>
+						<div className="vfy-wallet-list">
+							{wallets.length === 0 && (
+								<div className="vfy-no-wallet">
+									No EVM wallet detected.
+									<br />
+									Install{" "}
+									<a href="https://metamask.io" target="_blank" rel="noreferrer">
+										MetaMask
+									</a>{" "}
+									or{" "}
+									<a href="https://talisman.xyz" target="_blank" rel="noreferrer">
+										Talisman
+									</a>
+									.
+								</div>
+							)}
+							{wallets.map((w) => (
+								<button
+									key={w.id}
+									className={`vfy-wallet-btn${!w.installed ? " vfy-wallet-disabled" : ""}`}
+									onClick={() => w.installed && connectWallet(w)}
+									disabled={!w.installed || connecting === w.id}
+								>
+									<span className="vfy-wallet-icon">{w.icon}</span>
+									<span className="vfy-wallet-name">{w.name}</span>
+									{!w.installed && (
+										<span className="vfy-badge">Not installed</span>
+									)}
+									{connecting === w.id && (
+										<span className="vfy-badge">Connecting…</span>
+									)}
+									{w.installed && connecting !== w.id && (
+										<span className="vfy-wallet-arrow">→</span>
+									)}
+								</button>
+							))}
+						</div>
+						<p className="vfy-modal-note">Paseo Asset Hub · Chain ID 420420417</p>
+					</div>
+				</div>
+			)}
 
-      <div className="vfy-root">
-        <div className="vfy-noise" />
+			<div className="vfy-root">
+				<div className="vfy-noise" />
 
-        {/* ── Nav ───────────────────────────────────────────────────────── */}
-        <nav className="vfy-nav">
-          <a href="/" className="vfy-logo">
-            <span className="vfy-logo-dot" />
-            <span>ZK PAN</span>
-          </a>
-          <div className="vfy-nav-links">
-            <a href="#/generate" className="vfy-nav-link">Generate</a>
-            <a href="#/verify" className="vfy-nav-link vfy-nav-active">Verify</a>
-            <a href="#/event" className="vfy-nav-link">India Summit</a>
-          </div>
-          {!address ? (
-            <button className="vfy-connect-btn" onClick={() => setShowWalletModal(true)}>
-              Connect Wallet
-            </button>
-          ) : (
-            <div className="vfy-wallet-pill">
-              <span className="vfy-status-dot" />
-              <span className="vfy-addr-text">{shortAddr}</span>
-              <button className="vfy-disconnect-btn" onClick={disconnect}>Disconnect</button>
-            </div>
-          )}
-        </nav>
+				{/* ── Nav ───────────────────────────────────────────────────────── */}
+				<nav className="vfy-nav">
+					<a href="/" className="vfy-logo">
+						<span className="vfy-logo-dot" />
+						<span>ZK PAN</span>
+					</a>
+					<div className="vfy-nav-links">
+						<a href="#/generate" className="vfy-nav-link">
+							Generate
+						</a>
+						<a href="#/verify" className="vfy-nav-link vfy-nav-active">
+							Verify
+						</a>
+						<a href="#/event" className="vfy-nav-link">
+							India Summit
+						</a>
+					</div>
+					{!address ? (
+						<button
+							className="vfy-connect-btn"
+							onClick={() => setShowWalletModal(true)}
+						>
+							Connect Wallet
+						</button>
+					) : (
+						<div className="vfy-wallet-pill">
+							<span className="vfy-status-dot" />
+							<span className="vfy-addr-text">{shortAddr}</span>
+							<button className="vfy-disconnect-btn" onClick={disconnect}>
+								Disconnect
+							</button>
+						</div>
+					)}
+				</nav>
 
-        {/* ── Hero ──────────────────────────────────────────────────────── */}
-        <section className="vfy-hero">
-          <div className="vfy-hero-tag">
-            <span className="vfy-tag-dot" />
-            On-chain Attestation
-          </div>
-          <h1 className="vfy-hero-title">Verify Proof</h1>
-          <p className="vfy-hero-sub">
-            Upload your ZK proof JSON, check it against PANAttester and
-            AttestationRegistry on Paseo, then submit on-chain to receive an attestation.
-          </p>
-        </section>
+				{/* ── Hero ──────────────────────────────────────────────────────── */}
+				<section className="vfy-hero">
+					<div className="vfy-hero-tag">
+						<span className="vfy-tag-dot" />
+						On-chain Attestation
+					</div>
+					<h1 className="vfy-hero-title">Verify Proof</h1>
+					<p className="vfy-hero-sub">
+						Upload your ZK proof JSON, check it against PANAttester and
+						AttestationRegistry on Paseo, then submit on-chain to receive an
+						attestation.
+					</p>
+				</section>
 
-        {/* ── Main layout ───────────────────────────────────────────────── */}
-        <div className="vfy-layout">
+				{/* ── Main layout ───────────────────────────────────────────────── */}
+				<div className="vfy-layout">
+					{/* ── Left column ─────────────────────────────────────────────── */}
+					<div className="vfy-left">
+						{/* File upload / loaded */}
+						{!proofData ? (
+							<div
+								className={`vfy-dropzone${dragging ? " vfy-dragging" : ""}`}
+								onDragOver={(e) => {
+									e.preventDefault();
+									setDragging(true);
+								}}
+								onDragLeave={() => setDragging(false)}
+								onDrop={handleDrop}
+								onClick={() => fileRef.current?.click()}
+							>
+								<input
+									ref={fileRef}
+									type="file"
+									accept=".json"
+									className="vfy-file-input"
+									onChange={(e) => {
+										if (e.target.files?.[0]) handleFile(e.target.files[0]);
+									}}
+								/>
+								<div className="vfy-dz-icon">
+									<svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+										<path
+											d="M14 4v16M6 12l8-8 8 8"
+											stroke="currentColor"
+											strokeWidth="2"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										/>
+										<path
+											d="M4 22v1a1 1 0 001 1h18a1 1 0 001-1v-1"
+											stroke="currentColor"
+											strokeWidth="2"
+											strokeLinecap="round"
+										/>
+									</svg>
+								</div>
+								<p className="vfy-dz-title">Upload proof JSON</p>
+								<p className="vfy-dz-hint">
+									zk-pan-proof.json from the Generate page
+								</p>
+							</div>
+						) : (
+							<div className="vfy-file-loaded">
+								<div className="vfy-file-info">
+									<div className="vfy-file-icon">
+										<svg width="17" height="17" viewBox="0 0 18 18" fill="none">
+											<path
+												d="M4 2h7l4 4v10a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z"
+												stroke="currentColor"
+												strokeWidth="1.5"
+											/>
+											<path
+												d="M11 2v4h4"
+												stroke="currentColor"
+												strokeWidth="1.5"
+											/>
+										</svg>
+									</div>
+									<div>
+										<div className="vfy-file-name">{fileName}</div>
+										<div className="vfy-file-meta">
+											{pub?.length} public signals
+										</div>
+									</div>
+								</div>
+								<button
+									className="vfy-change-btn"
+									onClick={() => {
+										setProofData(null);
+										setStep("idle");
+										setCheckResult(null);
+										setError(null);
+									}}
+								>
+									Change
+								</button>
+							</div>
+						)}
 
-          {/* ── Left column ─────────────────────────────────────────────── */}
-          <div className="vfy-left">
+						{/* Public signals */}
+						{pub && (
+							<div className="vfy-signals-card">
+								<div className="vfy-card-title">Public Signals</div>
+								{[
+									{ label: "Pubkey Hash", value: pub[0]?.slice(0, 18) + "…" },
+									{ label: "Nullifier", value: pub[1]?.slice(0, 18) + "…" },
+									{ label: "Document Type", value: pub[2] },
+									{
+										label: "Revealed Data",
+										value: decodePackedBytes(pub[3] || "0"),
+									},
+									{ label: "Nullifier Seed", value: pub[4] },
+								].map(({ label, value }) => (
+									<div key={label} className="vfy-signal-row">
+										<span className="vfy-signal-label">{label}</span>
+										<span className="vfy-signal-value">{value}</span>
+									</div>
+								))}
+							</div>
+						)}
 
-            {/* File upload / loaded */}
-            {!proofData ? (
-              <div
-                className={`vfy-dropzone${dragging ? " vfy-dragging" : ""}`}
-                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={handleDrop}
-                onClick={() => fileRef.current?.click()}
-              >
-                <input ref={fileRef} type="file" accept=".json" className="vfy-file-input"
-                  onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
-                <div className="vfy-dz-icon">
-                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <path d="M14 4v16M6 12l8-8 8 8" stroke="currentColor" strokeWidth="2"
-                      strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M4 22v1a1 1 0 001 1h18a1 1 0 001-1v-1" stroke="currentColor"
-                      strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <p className="vfy-dz-title">Upload proof JSON</p>
-                <p className="vfy-dz-hint">zk-pan-proof.json from the Generate page</p>
-              </div>
-            ) : (
-              <div className="vfy-file-loaded">
-                <div className="vfy-file-info">
-                  <div className="vfy-file-icon">
-                    <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-                      <path d="M4 2h7l4 4v10a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z"
-                        stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M11 2v4h4" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="vfy-file-name">{fileName}</div>
-                    <div className="vfy-file-meta">{pub?.length} public signals</div>
-                  </div>
-                </div>
-                <button className="vfy-change-btn" onClick={() => {
-                  setProofData(null); setStep("idle");
-                  setCheckResult(null); setError(null);
-                }}>
-                  Change
-                </button>
-              </div>
-            )}
+						{/* Contract info */}
+						{proofData && (
+							<div className="vfy-contract-card">
+								<div className="vfy-card-title">Checking against</div>
+								{[
+									{
+										label: "PANAttester",
+										value: `${PAN_ATTESTER_ADDRESS.slice(0, 10)}…${PAN_ATTESTER_ADDRESS.slice(-6)}`,
+									},
+									{
+										label: "AttestationRegistry",
+										value: `${ATTESTATION_REGISTRY.slice(0, 10)}…${ATTESTATION_REGISTRY.slice(-6)}`,
+									},
+									{ label: "Network", value: "Paseo Asset Hub" },
+									{
+										label: "RPC",
+										value: "testnet-passet-hub-eth-rpc.polkadot.io",
+									},
+								].map(({ label, value }) => (
+									<div key={label} className="vfy-contract-row">
+										<span>{label}</span>
+										<code>{value}</code>
+									</div>
+								))}
+							</div>
+						)}
 
-            {/* Public signals */}
-            {pub && (
-              <div className="vfy-signals-card">
-                <div className="vfy-card-title">Public Signals</div>
-                {[
-                  { label: "Pubkey Hash", value: pub[0]?.slice(0, 18) + "…" },
-                  { label: "Nullifier", value: pub[1]?.slice(0, 18) + "…" },
-                  { label: "Document Type", value: pub[2] },
-                  { label: "Revealed Data", value: decodePackedBytes(pub[3] || "0") },
-                  { label: "Nullifier Seed", value: pub[4] },
-                ].map(({ label, value }) => (
-                  <div key={label} className="vfy-signal-row">
-                    <span className="vfy-signal-label">{label}</span>
-                    <span className="vfy-signal-value">{value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+						{/* Check action */}
+						{proofData && step === "idle" && (
+							<div className="vfy-check-actions">
+								{address ? (
+									<button
+										className="vfy-check-btn"
+										onClick={() => handleCheck(address)}
+									>
+										<svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+											<path
+												d="M8 1L1.5 4v5c0 3.87 2.76 7.49 6.5 8.5C11.74 16.49 14.5 12.87 14.5 9V4L8 1z"
+												stroke="currentColor"
+												strokeWidth="1.5"
+												strokeLinejoin="round"
+											/>
+										</svg>
+										Check Attestation
+										<span className="vfy-check-addr">
+											{address.slice(0, 8)}…
+										</span>
+									</button>
+								) : (
+									<div className="vfy-connect-prompt">
+										<span>Connect wallet to check attestation</span>
+										<button
+											className="vfy-connect-btn-sm"
+											onClick={() => setShowWalletModal(true)}
+										>
+											Connect →
+										</button>
+									</div>
+								)}
+							</div>
+						)}
 
-            {/* Contract info */}
-            {proofData && (
-              <div className="vfy-contract-card">
-                <div className="vfy-card-title">Checking against</div>
-                {[
-                  { label: "PANAttester", value: `${PAN_ATTESTER_ADDRESS.slice(0, 10)}…${PAN_ATTESTER_ADDRESS.slice(-6)}` },
-                  { label: "AttestationRegistry", value: `${ATTESTATION_REGISTRY.slice(0, 10)}…${ATTESTATION_REGISTRY.slice(-6)}` },
-                  { label: "Network", value: "Paseo Asset Hub" },
-                  { label: "RPC", value: "testnet-passet-hub-eth-rpc.polkadot.io" },
-                ].map(({ label, value }) => (
-                  <div key={label} className="vfy-contract-row">
-                    <span>{label}</span>
-                    <code>{value}</code>
-                  </div>
-                ))}
-              </div>
-            )}
+						{/* Error */}
+						{error && (
+							<div className="vfy-error-box">
+								<strong>Error:</strong> {error}
+							</div>
+						)}
+					</div>
 
-            {/* Check action */}
-            {proofData && step === "idle" && (
-              <div className="vfy-check-actions">
-                {address ? (
-                  <button className="vfy-check-btn" onClick={() => handleCheck(address)}>
-                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 1L1.5 4v5c0 3.87 2.76 7.49 6.5 8.5C11.74 16.49 14.5 12.87 14.5 9V4L8 1z"
-                        stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-                    </svg>
-                    Check Attestation
-                    <span className="vfy-check-addr">{address.slice(0, 8)}…</span>
-                  </button>
-                ) : (
-                  <div className="vfy-connect-prompt">
-                    <span>Connect wallet to check attestation</span>
-                    <button className="vfy-connect-btn-sm" onClick={() => setShowWalletModal(true)}>
-                      Connect →
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+					{/* ── Right column ────────────────────────────────────────────── */}
+					<div className="vfy-right">
+						{/* Loading */}
+						{(step === "checking" || step === "submitting") && (
+							<div className="vfy-loading-card">
+								<div className="vfy-spinner" />
+								<div>
+									<p className="vfy-loading-title">
+										{step === "checking"
+											? "Running 3 checks on Paseo…"
+											: "Submitting to Paseo…"}
+									</p>
+									{step === "checking" && checkedAddr && (
+										<p className="vfy-loading-addr">
+											{checkedAddr.slice(0, 14)}…{checkedAddr.slice(-6)}
+										</p>
+									)}
+								</div>
+							</div>
+						)}
 
-            {/* Error */}
-            {error && (
-              <div className="vfy-error-box">
-                <strong>Error:</strong> {error}
-              </div>
-            )}
-          </div>
+						{/* Result */}
+						{isChecked && (
+							<div
+								className={`vfy-result-card${checkResult!.isValid ? " vfy-result-success" : " vfy-result-fail"}`}
+							>
+								{/* Verdict */}
+								<div className="vfy-verdict">
+									{checkResult!.isValid ? (
+										<div className="vfy-verdict-icon vfy-verdict-pass">
+											<svg
+												width="28"
+												height="28"
+												viewBox="0 0 28 28"
+												fill="none"
+											>
+												<path
+													d="M7 14l5 5 9-10"
+													stroke="currentColor"
+													strokeWidth="2.5"
+													strokeLinecap="round"
+													strokeLinejoin="round"
+												/>
+											</svg>
+										</div>
+									) : (
+										<div className="vfy-verdict-icon vfy-verdict-fail-icon">
+											<svg
+												width="28"
+												height="28"
+												viewBox="0 0 28 28"
+												fill="none"
+											>
+												<path
+													d="M14 8v8M14 19v1"
+													stroke="currentColor"
+													strokeWidth="2.5"
+													strokeLinecap="round"
+												/>
+											</svg>
+										</div>
+									)}
+									<h2 className="vfy-verdict-title">
+										{checkResult!.isValid
+											? "Attestation Valid"
+											: "No Attestation Found"}
+									</h2>
+									<p className="vfy-verdict-addr">
+										{checkedAddr?.slice(0, 10)}…{checkedAddr?.slice(-8)}
+									</p>
+								</div>
 
-          {/* ── Right column ────────────────────────────────────────────── */}
-          <div className="vfy-right">
+								{/* 3 checks mirroring verify-pan.ts */}
+								<div className="vfy-checks">
+									{[
+										{
+											name: "[1] PANAttester.hasValidAttestation()",
+											pass: checkResult!.hasAttestation,
+											result: String(checkResult!.hasAttestation),
+										},
+										{
+											name: "[2] AttestationRegistry.isValid()",
+											pass: checkResult!.isValid,
+											result: checkResult!.isValid
+												? "true — registry confirms"
+												: "false — not in registry",
+										},
+										{
+											name: "[3] getNullifierByAddress()",
+											pass: checkResult!.nullifier > 0n,
+											result:
+												checkResult!.nullifier > 0n
+													? checkResult!.nullifier
+															.toString()
+															.slice(0, 16) + "…"
+													: "No nullifier",
+										},
+									].map(({ name, pass, result }) => (
+										<div key={name} className="vfy-check-row">
+											<div
+												className={`vfy-check-icon${pass ? " vfy-pass" : " vfy-fail-icon-sm"}`}
+											>
+												{pass ? "✓" : "✗"}
+											</div>
+											<div className="vfy-check-info">
+												<span className="vfy-check-name">{name}</span>
+												<span className="vfy-check-result">{result}</span>
+											</div>
+										</div>
+									))}
+								</div>
 
-            {/* Loading */}
-            {(step === "checking" || step === "submitting") && (
-              <div className="vfy-loading-card">
-                <div className="vfy-spinner" />
-                <div>
-                  <p className="vfy-loading-title">
-                    {step === "checking" ? "Running 3 checks on Paseo…" : "Submitting to Paseo…"}
-                  </p>
-                  {step === "checking" && checkedAddr && (
-                    <p className="vfy-loading-addr">
-                      {checkedAddr.slice(0, 14)}…{checkedAddr.slice(-6)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+								{/* Verified attributes */}
+								{checkResult!.isValid && (
+									<div className="vfy-attrs">
+										{[
+											"Valid PAN card holder",
+											"Signed by National e-Governance Division",
+											`PAN: ${decodePackedBytes(pub?.[3] || "0")}`,
+											"Sybil-resistant nullifier",
+										].map((a) => (
+											<div key={a} className="vfy-attr">
+												<svg
+													width="14"
+													height="14"
+													viewBox="0 0 15 15"
+													fill="none"
+												>
+													<circle
+														cx="7.5"
+														cy="7.5"
+														r="6.5"
+														fill="currentColor"
+														fillOpacity="0.12"
+													/>
+													<path
+														d="M4.5 7.5l2.5 2.5 4-4"
+														stroke="currentColor"
+														strokeWidth="1.4"
+														strokeLinecap="round"
+														strokeLinejoin="round"
+													/>
+												</svg>
+												{a}
+											</div>
+										))}
+									</div>
+								)}
 
-            {/* Result */}
-            {isChecked && (
-              <div className={`vfy-result-card${checkResult!.isValid ? " vfy-result-success" : " vfy-result-fail"}`}>
+								{/* TX hash */}
+								{txHash && (
+									<div className="vfy-tx-row">
+										<span>TX Hash</span>
+										<code>
+											{txHash.slice(0, 18)}…{txHash.slice(-8)}
+										</code>
+									</div>
+								)}
 
-                {/* Verdict */}
-                <div className="vfy-verdict">
-                  {checkResult!.isValid ? (
-                    <div className="vfy-verdict-icon vfy-verdict-pass">
-                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                        <path d="M7 14l5 5 9-10" stroke="currentColor" strokeWidth="2.5"
-                          strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="vfy-verdict-icon vfy-verdict-fail-icon">
-                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                        <path d="M14 8v8M14 19v1" stroke="currentColor" strokeWidth="2.5"
-                          strokeLinecap="round" />
-                      </svg>
-                    </div>
-                  )}
-                  <h2 className="vfy-verdict-title">
-                    {checkResult!.isValid ? "Attestation Valid" : "No Attestation Found"}
-                  </h2>
-                  <p className="vfy-verdict-addr">
-                    {checkedAddr?.slice(0, 10)}…{checkedAddr?.slice(-8)}
-                  </p>
-                </div>
+								{/* Submit section — shown only when not yet attested */}
+								{!checkResult!.isValid && proofData && (
+									<div className="vfy-submit-section">
+										<p className="vfy-submit-desc">
+											Submit your proof on-chain to PANAttester and receive an
+											attestation via Protocol Commons AttestationRegistry.
+										</p>
+										{!address ? (
+											<div className="vfy-connect-prompt">
+												<span>Connect wallet to submit</span>
+												<button
+													className="vfy-connect-btn-sm"
+													onClick={() => setShowWalletModal(true)}
+												>
+													Connect →
+												</button>
+											</div>
+										) : (
+											<button
+												className="vfy-submit-btn"
+												onClick={handleSubmit}
+												disabled={step !== "idle"}
+											>
+												{step !== "idle" ? (
+													<>
+														<div className="vfy-submit-spinner" />{" "}
+														Submitting to Paseo…
+													</>
+												) : (
+													<>
+														<svg
+															width="15"
+															height="15"
+															viewBox="0 0 16 16"
+															fill="none"
+														>
+															<path
+																d="M8 1L1.5 4v5c0 3.87 2.76 7.49 6.5 8.5C11.74 16.49 14.5 12.87 14.5 9V4L8 1z"
+																stroke="currentColor"
+																strokeWidth="1.5"
+																strokeLinejoin="round"
+															/>
+														</svg>
+														Submit Proof On-Chain
+													</>
+												)}
+											</button>
+										)}
+									</div>
+								)}
 
-                {/* 3 checks mirroring verify-pan.ts */}
-                <div className="vfy-checks">
-                  {[
-                    {
-                      name: "[1] PANAttester.hasValidAttestation()",
-                      pass: checkResult!.hasAttestation,
-                      result: String(checkResult!.hasAttestation),
-                    },
-                    {
-                      name: "[2] AttestationRegistry.isValid()",
-                      pass: checkResult!.isValid,
-                      result: checkResult!.isValid ? "true — registry confirms" : "false — not in registry",
-                    },
-                    {
-                      name: "[3] getNullifierByAddress()",
-                      pass: checkResult!.nullifier > 0n,
-                      result: checkResult!.nullifier > 0n
-                        ? checkResult!.nullifier.toString().slice(0, 16) + "…"
-                        : "No nullifier",
-                    },
-                  ].map(({ name, pass, result }) => (
-                    <div key={name} className="vfy-check-row">
-                      <div className={`vfy-check-icon${pass ? " vfy-pass" : " vfy-fail-icon-sm"}`}>
-                        {pass ? "✓" : "✗"}
-                      </div>
-                      <div className="vfy-check-info">
-                        <span className="vfy-check-name">{name}</span>
-                        <span className="vfy-check-result">{result}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+								<button className="vfy-reset-btn" onClick={() => setStep("idle")}>
+									Check another address
+								</button>
+							</div>
+						)}
 
-                {/* Verified attributes */}
-                {checkResult!.isValid && (
-                  <div className="vfy-attrs">
-                    {[
-                      "Valid PAN card holder",
-                      "Signed by National e-Governance Division",
-                      `PAN: ${decodePackedBytes(pub?.[3] || "0")}`,
-                      "Sybil-resistant nullifier",
-                    ].map((a) => (
-                      <div key={a} className="vfy-attr">
-                        <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                          <circle cx="7.5" cy="7.5" r="6.5" fill="currentColor" fillOpacity="0.12" />
-                          <path d="M4.5 7.5l2.5 2.5 4-4" stroke="currentColor" strokeWidth="1.4"
-                            strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        {a}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* TX hash */}
-                {txHash && (
-                  <div className="vfy-tx-row">
-                    <span>TX Hash</span>
-                    <code>{txHash.slice(0, 18)}…{txHash.slice(-8)}</code>
-                  </div>
-                )}
-
-                {/* Submit section — shown only when not yet attested */}
-                {!checkResult!.isValid && proofData && (
-                  <div className="vfy-submit-section">
-                    <p className="vfy-submit-desc">
-                      Submit your proof on-chain to PANAttester and receive an attestation
-                      via Protocol Commons AttestationRegistry.
-                    </p>
-                    {!address ? (
-                      <div className="vfy-connect-prompt">
-                        <span>Connect wallet to submit</span>
-                        <button className="vfy-connect-btn-sm" onClick={() => setShowWalletModal(true)}>
-                          Connect →
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        className="vfy-submit-btn"
-                        onClick={handleSubmit}
-                        disabled={step !== "idle"}
-                      >
-                        {step !== "idle" ? (
-                          <><div className="vfy-submit-spinner" /> Submitting to Paseo…</>
-                        ) : (
-                          <>
-                            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                              <path d="M8 1L1.5 4v5c0 3.87 2.76 7.49 6.5 8.5C11.74 16.49 14.5 12.87 14.5 9V4L8 1z"
-                                stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-                            </svg>
-                            Submit Proof On-Chain
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                <button className="vfy-reset-btn" onClick={() => setStep("idle")}>
-                  Check another address
-                </button>
-              </div>
-            )}
-
-            {/* Placeholder */}
-            {step === "idle" && (
-              <div className="vfy-placeholder">
-                <div className="vfy-placeholder-icon">◈</div>
-                <p>
-                  {!proofData
-                    ? "Upload a proof file to get started"
-                    : !address
-                    ? "Connect wallet and click Check Attestation"
-                    : "Click Check Attestation"}
-                </p>
-                {!proofData && (
-                  <a href="/generate" className="vfy-placeholder-link">
-                    Generate a proof first →
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
-  );
+						{/* Placeholder */}
+						{step === "idle" && (
+							<div className="vfy-placeholder">
+								<div className="vfy-placeholder-icon">◈</div>
+								<p>
+									{!proofData
+										? "Upload a proof file to get started"
+										: !address
+											? "Connect wallet and click Check Attestation"
+											: "Click Check Attestation"}
+								</p>
+								{!proofData && (
+									<a href="/generate" className="vfy-placeholder-link">
+										Generate a proof first →
+									</a>
+								)}
+							</div>
+						)}
+					</div>
+				</div>
+			</div>
+		</>
+	);
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────

@@ -57,10 +57,11 @@ export default function App() {
 								<Link
 									key={item.path}
 									to={item.path}
-									className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${location.pathname === item.path
+									className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+										location.pathname === item.path
 											? "text-white"
 											: "text-text-secondary hover:text-text-primary hover:bg-white/[0.04]"
-										}`}
+									}`}
 								>
 									{location.pathname === item.path && (
 										<span className="absolute inset-0 rounded-lg bg-polka-500/15 border border-polka-500/25" />

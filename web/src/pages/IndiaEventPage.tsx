@@ -9,66 +9,66 @@ const ATTESTATION_REGISTRY = "0x4d018c530e01bbc98b042a18a4d4090658bcd8f3" as con
 const SCHEMA = "0x1f70926f006bbe27dee4902c852a268b648b358bebc8eeb42e524004752ead18" as const;
 
 const paseoAssetHub = {
-  id: 420420417,
-  name: "Polkadot Hub TestNet",
-  nativeCurrency: { name: "PAS", symbol: "PAS", decimals: 18 },
-  rpcUrls: { default: { http: [PASEO_RPC] } },
+	id: 420420417,
+	name: "Polkadot Hub TestNet",
+	nativeCurrency: { name: "PAS", symbol: "PAS", decimals: 18 },
+	rpcUrls: { default: { http: [PASEO_RPC] } },
 } as const;
 
 const REGISTRY_ABI = [
-  {
-    name: "isValid",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "subject", type: "address" },
-      { name: "schema", type: "bytes32" },
-      { name: "attester", type: "address" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-  {
-    name: "get",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "subject", type: "address" },
-      { name: "schema", type: "bytes32" },
-      { name: "attester", type: "address" },
-    ],
-    outputs: [
-      {
-        name: "",
-        type: "tuple",
-        components: [
-          { name: "schema", type: "bytes32" },
-          { name: "attester", type: "address" },
-          { name: "subject", type: "address" },
-          { name: "value", type: "bytes32" },
-          { name: "expiry", type: "uint64" },
-          { name: "issuedAt", type: "uint64" },
-          { name: "revokedAt", type: "uint64" },
-        ],
-      },
-    ],
-  },
+	{
+		name: "isValid",
+		type: "function",
+		stateMutability: "view",
+		inputs: [
+			{ name: "subject", type: "address" },
+			{ name: "schema", type: "bytes32" },
+			{ name: "attester", type: "address" },
+		],
+		outputs: [{ name: "", type: "bool" }],
+	},
+	{
+		name: "get",
+		type: "function",
+		stateMutability: "view",
+		inputs: [
+			{ name: "subject", type: "address" },
+			{ name: "schema", type: "bytes32" },
+			{ name: "attester", type: "address" },
+		],
+		outputs: [
+			{
+				name: "",
+				type: "tuple",
+				components: [
+					{ name: "schema", type: "bytes32" },
+					{ name: "attester", type: "address" },
+					{ name: "subject", type: "address" },
+					{ name: "value", type: "bytes32" },
+					{ name: "expiry", type: "uint64" },
+					{ name: "issuedAt", type: "uint64" },
+					{ name: "revokedAt", type: "uint64" },
+				],
+			},
+		],
+	},
 ] as const;
 
 const PAN_ATTESTER_ABI = [
-  {
-    name: "hasValidAttestation",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [{ name: "", type: "bool" }],
-  },
-  {
-    name: "getNullifierByAddress",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
+	{
+		name: "hasValidAttestation",
+		type: "function",
+		stateMutability: "view",
+		inputs: [{ name: "user", type: "address" }],
+		outputs: [{ name: "", type: "bool" }],
+	},
+	{
+		name: "getNullifierByAddress",
+		type: "function",
+		stateMutability: "view",
+		inputs: [{ name: "user", type: "address" }],
+		outputs: [{ name: "", type: "uint256" }],
+	},
 ] as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -82,468 +82,544 @@ type CheckState = "idle" | "checking" | "verified" | "unverified" | "error";
 // }
 
 interface Ticket {
-  tier: string;
-  original: number;
-  discounted: number;
-  perks: string[];
+	tier: string;
+	original: number;
+	discounted: number;
+	perks: string[];
 }
 
 const TICKETS: Ticket[] = [
-  {
-    tier: "General",
-    original: 4999,
-    discounted: 2499,
-    perks: ["All keynotes", "Networking dinner", "Swag bag"],
-  },
-  {
-    tier: "Builder",
-    original: 9999,
-    discounted: 4999,
-    perks: ["All General perks", "Hackathon access", "Workshop seats", "1:1 mentor session"],
-  },
-  {
-    tier: "VIP",
-    original: 24999,
-    discounted: 12499,
-    perks: ["All Builder perks", "Speaker dinner", "Front-row seating", "Recording access"],
-  },
+	{
+		tier: "General",
+		original: 4999,
+		discounted: 2499,
+		perks: ["All keynotes", "Networking dinner", "Swag bag"],
+	},
+	{
+		tier: "Builder",
+		original: 9999,
+		discounted: 4999,
+		perks: ["All General perks", "Hackathon access", "Workshop seats", "1:1 mentor session"],
+	},
+	{
+		tier: "VIP",
+		original: 24999,
+		discounted: 12499,
+		perks: ["All Builder perks", "Speaker dinner", "Front-row seating", "Recording access"],
+	},
 ];
 
 // ── Wallet detection ──────────────────────────────────────────────────────────
 
 interface DetectedWallet {
-  id: string;
-  name: string;
-  icon: string;
-  provider: () => any;
-  installed: boolean;
+	id: string;
+	name: string;
+	icon: string;
+	provider: () => any;
+	installed: boolean;
 }
 
 function detectWallets(): DetectedWallet[] {
-  const eth = (window as any).ethereum;
-  const wallets: DetectedWallet[] = [
-    {
-      id: "metamask",
-      name: "MetaMask",
-      icon: "🦊",
-      provider: () => {
-        if (eth?.providers) return eth.providers.find((p: any) => p.isMetaMask) ?? eth;
-        return eth?.isMetaMask ? eth : null;
-      },
-      installed: !!(eth?.isMetaMask || eth?.providers?.some((p: any) => p.isMetaMask)),
-    },
-    {
-      id: "talisman",
-      name: "Talisman",
-      icon: "🔮",
-      provider: () => {
-        if (eth?.providers) return eth.providers.find((p: any) => p.isTalisman) ?? null;
-        return eth?.isTalisman ? eth : null;
-      },
-      installed: !!(eth?.isTalisman || eth?.providers?.some((p: any) => p.isTalisman)),
-    },
-    {
-      id: "subwallet",
-      name: "SubWallet",
-      icon: "🪐",
-      provider: () => {
-        if (eth?.providers) return eth.providers.find((p: any) => p.isSubWallet) ?? null;
-        return eth?.isSubWallet ? eth : null;
-      },
-      installed: !!(eth?.isSubWallet || eth?.providers?.some((p: any) => p.isSubWallet)),
-    },
-    {
-      id: "injected",
-      name: "Browser Wallet",
-      icon: "🌐",
-      provider: () => eth,
-      installed: !!eth,
-    },
-  ];
-  // deduplicate: if no specific wallet detected, only show generic
-  const hasSpecific = wallets.slice(0, 3).some((w) => w.installed);
-  if (hasSpecific) return wallets.filter((w) => w.id !== "injected" || !hasSpecific);
-  return wallets.filter((w) => w.id === "injected");
+	const eth = (window as any).ethereum;
+	const wallets: DetectedWallet[] = [
+		{
+			id: "metamask",
+			name: "MetaMask",
+			icon: "🦊",
+			provider: () => {
+				if (eth?.providers) return eth.providers.find((p: any) => p.isMetaMask) ?? eth;
+				return eth?.isMetaMask ? eth : null;
+			},
+			installed: !!(eth?.isMetaMask || eth?.providers?.some((p: any) => p.isMetaMask)),
+		},
+		{
+			id: "talisman",
+			name: "Talisman",
+			icon: "🔮",
+			provider: () => {
+				if (eth?.providers) return eth.providers.find((p: any) => p.isTalisman) ?? null;
+				return eth?.isTalisman ? eth : null;
+			},
+			installed: !!(eth?.isTalisman || eth?.providers?.some((p: any) => p.isTalisman)),
+		},
+		{
+			id: "subwallet",
+			name: "SubWallet",
+			icon: "🪐",
+			provider: () => {
+				if (eth?.providers) return eth.providers.find((p: any) => p.isSubWallet) ?? null;
+				return eth?.isSubWallet ? eth : null;
+			},
+			installed: !!(eth?.isSubWallet || eth?.providers?.some((p: any) => p.isSubWallet)),
+		},
+		{
+			id: "injected",
+			name: "Browser Wallet",
+			icon: "🌐",
+			provider: () => eth,
+			installed: !!eth,
+		},
+	];
+	// deduplicate: if no specific wallet detected, only show generic
+	const hasSpecific = wallets.slice(0, 3).some((w) => w.installed);
+	if (hasSpecific) return wallets.filter((w) => w.id !== "injected" || !hasSpecific);
+	return wallets.filter((w) => w.id === "injected");
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function IndiaEventPage() {
-  const [address, setAddress] = useState<string | null>(null);
-  const [checkState, setCheckState] = useState<CheckState>("idle");
-  // const [record, setRecord] = useState<AttestationRecord | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<string | null>(null);
-  const [wallets, setWallets] = useState<DetectedWallet[]>([]);
-  const [connecting, setConnecting] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+	const [address, setAddress] = useState<string | null>(null);
+	const [checkState, setCheckState] = useState<CheckState>("idle");
+	// const [record, setRecord] = useState<AttestationRecord | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	const [showModal, setShowModal] = useState(false);
+	const [selectedTier, setSelectedTier] = useState<string | null>(null);
+	const [wallets, setWallets] = useState<DetectedWallet[]>([]);
+	const [connecting, setConnecting] = useState<string | null>(null);
+	const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
-  // ── Countdown ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const target = new Date("2025-09-15T09:00:00+05:30").getTime();
-    const tick = () => {
-      const diff = target - Date.now();
-      if (diff <= 0) return;
-      setTimeLeft({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff % 86400000) / 3600000),
-        mins: Math.floor((diff % 3600000) / 60000),
-        secs: Math.floor((diff % 60000) / 1000),
-      });
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
+	// ── Countdown ───────────────────────────────────────────────────────────────
+	useEffect(() => {
+		const target = new Date("2025-09-15T09:00:00+05:30").getTime();
+		const tick = () => {
+			const diff = target - Date.now();
+			if (diff <= 0) return;
+			setTimeLeft({
+				days: Math.floor(diff / 86400000),
+				hours: Math.floor((diff % 86400000) / 3600000),
+				mins: Math.floor((diff % 3600000) / 60000),
+				secs: Math.floor((diff % 60000) / 1000),
+			});
+		};
+		tick();
+		const id = setInterval(tick, 1000);
+		return () => clearInterval(id);
+	}, []);
 
-  // ── Detect wallets on modal open ────────────────────────────────────────────
-  useEffect(() => {
-    if (showModal) setWallets(detectWallets());
-  }, [showModal]);
+	// ── Detect wallets on modal open ────────────────────────────────────────────
+	useEffect(() => {
+		if (showModal) setWallets(detectWallets());
+	}, [showModal]);
 
-  // ── Attestation check ───────────────────────────────────────────────────────
-  const checkAttestation = useCallback(async (addr: string) => {
-    setCheckState("checking");
-    setError(null);
-    try {
-      const client = createPublicClient({
-        chain: paseoAssetHub as any,
-        transport: http(PASEO_RPC),
-      });
+	// ── Attestation check ───────────────────────────────────────────────────────
+	const checkAttestation = useCallback(async (addr: string) => {
+		setCheckState("checking");
+		setError(null);
+		try {
+			const client = createPublicClient({
+				chain: paseoAssetHub as any,
+				transport: http(PASEO_RPC),
+			});
 
-      const [hasValid, isValid] = await Promise.all([
-        client.readContract({
-          address: PAN_ATTESTER,
-          abi: PAN_ATTESTER_ABI,
-          functionName: "hasValidAttestation",
-          args: [addr as `0x${string}`],
-        }),
-        client.readContract({
-          address: ATTESTATION_REGISTRY,
-          abi: REGISTRY_ABI,
-          functionName: "isValid",
-          args: [addr as `0x${string}`, SCHEMA, PAN_ATTESTER],
-        }),
-      ]);
+			const [hasValid, isValid] = await Promise.all([
+				client.readContract({
+					address: PAN_ATTESTER,
+					abi: PAN_ATTESTER_ABI,
+					functionName: "hasValidAttestation",
+					args: [addr as `0x${string}`],
+				}),
+				client.readContract({
+					address: ATTESTATION_REGISTRY,
+					abi: REGISTRY_ABI,
+					functionName: "isValid",
+					args: [addr as `0x${string}`, SCHEMA, PAN_ATTESTER],
+				}),
+			]);
 
-      if (hasValid && isValid) {
-        // const [rec, nullifier] = await Promise.all([
-        //   client.readContract({
-        //     address: ATTESTATION_REGISTRY,
-        //     abi: REGISTRY_ABI,
-        //     functionName: "get",
-        //     args: [addr as `0x${string}`, SCHEMA, PAN_ATTESTER],
-        //   }),
-        //   client.readContract({
-        //     address: PAN_ATTESTER,
-        //     abi: PAN_ATTESTER_ABI,
-        //     functionName: "getNullifierByAddress",
-        //     args: [addr as `0x${string}`],
-        //   }),
-        // ]);
-        // console.log(Number((rec as any).issuedAt));
-        // setRecord({
-        //   issuedAt: Number((rec as any).issuedAt),
-        //   expiry: Number((rec as any).expiry),
-        //   nullifier: nullifier as bigint,
-        // });
-        setCheckState("verified");
-      } else {
-        setCheckState("unverified");
-      }
-    } catch (e: any) {
-      setError(e.message?.includes("fetch") ? "Cannot reach Paseo. Check your network." : e.message || "Check failed");
-      setCheckState("error");
-    }
-  }, []);
+			if (hasValid && isValid) {
+				// const [rec, nullifier] = await Promise.all([
+				//   client.readContract({
+				//     address: ATTESTATION_REGISTRY,
+				//     abi: REGISTRY_ABI,
+				//     functionName: "get",
+				//     args: [addr as `0x${string}`, SCHEMA, PAN_ATTESTER],
+				//   }),
+				//   client.readContract({
+				//     address: PAN_ATTESTER,
+				//     abi: PAN_ATTESTER_ABI,
+				//     functionName: "getNullifierByAddress",
+				//     args: [addr as `0x${string}`],
+				//   }),
+				// ]);
+				// console.log(Number((rec as any).issuedAt));
+				// setRecord({
+				//   issuedAt: Number((rec as any).issuedAt),
+				//   expiry: Number((rec as any).expiry),
+				//   nullifier: nullifier as bigint,
+				// });
+				setCheckState("verified");
+			} else {
+				setCheckState("unverified");
+			}
+		} catch (e: any) {
+			setError(
+				e.message?.includes("fetch")
+					? "Cannot reach Paseo. Check your network."
+					: e.message || "Check failed",
+			);
+			setCheckState("error");
+		}
+	}, []);
 
-  // ── Connect wallet ──────────────────────────────────────────────────────────
-  const connectWallet = useCallback(
-    async (wallet: DetectedWallet) => {
-      setConnecting(wallet.id);
-      try {
-        const provider = wallet.provider();
-        if (!provider) throw new Error(`${wallet.name} not detected`);
-        const accounts = await provider.request({ method: "eth_requestAccounts" });
-        if (!accounts?.length) throw new Error("No accounts returned");
-        const addr = accounts[0] as string;
-        setAddress(addr);
-        setShowModal(false);
-        await checkAttestation(addr);
-      } catch (e: any) {
-        setError(e.message || "Connection failed");
-      } finally {
-        setConnecting(null);
-      }
-    },
-    [checkAttestation]
-  );
+	// ── Connect wallet ──────────────────────────────────────────────────────────
+	const connectWallet = useCallback(
+		async (wallet: DetectedWallet) => {
+			setConnecting(wallet.id);
+			try {
+				const provider = wallet.provider();
+				if (!provider) throw new Error(`${wallet.name} not detected`);
+				const accounts = await provider.request({ method: "eth_requestAccounts" });
+				if (!accounts?.length) throw new Error("No accounts returned");
+				const addr = accounts[0] as string;
+				setAddress(addr);
+				setShowModal(false);
+				await checkAttestation(addr);
+			} catch (e: any) {
+				setError(e.message || "Connection failed");
+			} finally {
+				setConnecting(null);
+			}
+		},
+		[checkAttestation],
+	);
 
-  const disconnect = () => {
-    setAddress(null);
-    setCheckState("idle");
-    // setRecord(null);
-    setError(null);
-  };
+	const disconnect = () => {
+		setAddress(null);
+		setCheckState("idle");
+		// setRecord(null);
+		setError(null);
+	};
 
-  const isVerified = checkState === "verified";
-  const shortAddr = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "";
+	const isVerified = checkState === "verified";
+	const shortAddr = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "";
 
-  return (
-    <>
-      <style>{CSS}</style>
+	return (
+		<>
+			<style>{CSS}</style>
 
-      {/* ── Wallet modal ──────────────────────────────────────────────────── */}
-      {showModal && (
-        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <span className="modal-title">Connect Wallet</span>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
-            </div>
-            <p className="modal-sub">Choose your wallet to check PAN attestation</p>
-            <div className="wallet-list">
-              {wallets.length === 0 && (
-                <div className="no-wallet">
-                  No EVM wallet detected.<br />
-                  Install <a href="https://metamask.io" target="_blank" rel="noreferrer">MetaMask</a> or{" "}
-                  <a href="https://talisman.xyz" target="_blank" rel="noreferrer">Talisman</a>.
-                </div>
-              )}
-              {wallets.map((w) => (
-                <button
-                  key={w.id}
-                  className={`wallet-btn ${!w.installed ? "wallet-btn--disabled" : ""}`}
-                  onClick={() => w.installed && connectWallet(w)}
-                  disabled={!w.installed || connecting === w.id}
-                >
-                  <span className="wallet-icon">{w.icon}</span>
-                  <span className="wallet-name">{w.name}</span>
-                  {!w.installed && <span className="wallet-badge">Not installed</span>}
-                  {connecting === w.id && <span className="wallet-badge">Connecting…</span>}
-                  {w.installed && connecting !== w.id && <span className="wallet-arrow">→</span>}
-                </button>
-              ))}
-            </div>
-            <p className="modal-note">
-              On Paseo Asset Hub · Chain ID 420420417
-            </p>
-          </div>
-        </div>
-      )}
+			{/* ── Wallet modal ──────────────────────────────────────────────────── */}
+			{showModal && (
+				<div className="modal-backdrop" onClick={() => setShowModal(false)}>
+					<div className="modal" onClick={(e) => e.stopPropagation()}>
+						<div className="modal-header">
+							<span className="modal-title">Connect Wallet</span>
+							<button className="modal-close" onClick={() => setShowModal(false)}>
+								✕
+							</button>
+						</div>
+						<p className="modal-sub">Choose your wallet to check PAN attestation</p>
+						<div className="wallet-list">
+							{wallets.length === 0 && (
+								<div className="no-wallet">
+									No EVM wallet detected.
+									<br />
+									Install{" "}
+									<a href="https://metamask.io" target="_blank" rel="noreferrer">
+										MetaMask
+									</a>{" "}
+									or{" "}
+									<a href="https://talisman.xyz" target="_blank" rel="noreferrer">
+										Talisman
+									</a>
+									.
+								</div>
+							)}
+							{wallets.map((w) => (
+								<button
+									key={w.id}
+									className={`wallet-btn ${!w.installed ? "wallet-btn--disabled" : ""}`}
+									onClick={() => w.installed && connectWallet(w)}
+									disabled={!w.installed || connecting === w.id}
+								>
+									<span className="wallet-icon">{w.icon}</span>
+									<span className="wallet-name">{w.name}</span>
+									{!w.installed && (
+										<span className="wallet-badge">Not installed</span>
+									)}
+									{connecting === w.id && (
+										<span className="wallet-badge">Connecting…</span>
+									)}
+									{w.installed && connecting !== w.id && (
+										<span className="wallet-arrow">→</span>
+									)}
+								</button>
+							))}
+						</div>
+						<p className="modal-note">On Paseo Asset Hub · Chain ID 420420417</p>
+					</div>
+				</div>
+			)}
 
-      <div className="event-root">
-        {/* ── Noise overlay ─────────────────────────────────────────────── */}
-        <div className="noise" />
+			<div className="event-root">
+				{/* ── Noise overlay ─────────────────────────────────────────────── */}
+				<div className="noise" />
 
-        {/* ── Nav ───────────────────────────────────────────────────────── */}
-        <nav className="nav">
-          <div className="nav-logo">
-            <span className="nav-dot" />
-            <span>Polkadot India Summit</span>
-          </div>
-          {!address ? (
-            <button className="btn-connect" onClick={() => setShowModal(true)}>
-              Connect Wallet
-            </button>
-          ) : (
-            <div className="nav-wallet">
-              <span className={`status-dot ${isVerified ? "status-dot--green" : "status-dot--amber"}`} />
-              <span className="nav-addr">{shortAddr}</span>
-              <button className="btn-disconnect" onClick={disconnect}>Disconnect</button>
-            </div>
-          )}
-        </nav>
+				{/* ── Nav ───────────────────────────────────────────────────────── */}
+				<nav className="nav">
+					<div className="nav-logo">
+						<span className="nav-dot" />
+						<span>Polkadot India Summit</span>
+					</div>
+					{!address ? (
+						<button className="btn-connect" onClick={() => setShowModal(true)}>
+							Connect Wallet
+						</button>
+					) : (
+						<div className="nav-wallet">
+							<span
+								className={`status-dot ${isVerified ? "status-dot--green" : "status-dot--amber"}`}
+							/>
+							<span className="nav-addr">{shortAddr}</span>
+							<button className="btn-disconnect" onClick={disconnect}>
+								Disconnect
+							</button>
+						</div>
+					)}
+				</nav>
 
-        {/* ── Hero ──────────────────────────────────────────────────────── */}
-        <section className="hero">
-          <div className="hero-eyebrow">
-            <span className="pill">🇮🇳 Bengaluru, India</span>
-            <span className="pill">September 15 – 17, 2026</span>
-            <span className="pill pill--pink">ZK Identity × Polkadot</span>
-          </div>
-          <h1 className="hero-title">
-            India's Biggest<br />
-            <em>Web3 Summit</em>
-          </h1>
-          <p className="hero-sub">
-            Three days of builders, founders, and researchers pushing the frontier of
-            decentralised identity, cross-chain infra, and zero-knowledge proofs — in the
-            heart of India's tech capital.
-          </p>
+				{/* ── Hero ──────────────────────────────────────────────────────── */}
+				<section className="hero">
+					<div className="hero-eyebrow">
+						<span className="pill">🇮🇳 Bengaluru, India</span>
+						<span className="pill">September 15 – 17, 2026</span>
+						<span className="pill pill--pink">ZK Identity × Polkadot</span>
+					</div>
+					<h1 className="hero-title">
+						India's Biggest
+						<br />
+						<em>Web3 Summit</em>
+					</h1>
+					<p className="hero-sub">
+						Three days of builders, founders, and researchers pushing the frontier of
+						decentralised identity, cross-chain infra, and zero-knowledge proofs — in
+						the heart of India's tech capital.
+					</p>
 
-          {/* Countdown */}
-          <div className="countdown">
-            {[
-              { v: timeLeft.days, l: "Days" },
-              { v: timeLeft.hours, l: "Hours" },
-              { v: timeLeft.mins, l: "Mins" },
-              { v: timeLeft.secs, l: "Secs" },
-            ].map(({ v, l }) => (
-              <div key={l} className="count-block">
-                <span className="count-num">{String(v).padStart(2, "0")}</span>
-                <span className="count-label">{l}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+					{/* Countdown */}
+					<div className="countdown">
+						{[
+							{ v: timeLeft.days, l: "Days" },
+							{ v: timeLeft.hours, l: "Hours" },
+							{ v: timeLeft.mins, l: "Mins" },
+							{ v: timeLeft.secs, l: "Secs" },
+						].map(({ v, l }) => (
+							<div key={l} className="count-block">
+								<span className="count-num">{String(v).padStart(2, "0")}</span>
+								<span className="count-label">{l}</span>
+							</div>
+						))}
+					</div>
+				</section>
 
-        {/* ── Attestation status banner ──────────────────────────────────── */}
-        {address && (
-          <div className={`attest-banner attest-banner--${checkState}`}>
-            {checkState === "checking" && (
-              <div className="banner-inner">
-                <span className="spinner" />
-                <span>Checking your PAN attestation on Paseo…</span>
-              </div>
-            )}
-            {checkState === "verified" && (
-              <div className="banner-inner">
-                <span className="check-icon">✓</span>
-                <div>
-                  <strong>Verified PAN Holder</strong>
-                  <span className="banner-detail">
-                    Attested on-chain
-                  </span>
-                </div>
-                <span className="discount-tag">50% OFF</span>
-              </div>
-            )}
-            {checkState === "unverified" && (
-              <div className="banner-inner">
-                <span className="x-icon">✗</span>
-                <div>
-                  <strong>No PAN attestation found</strong>
-                  <span className="banner-detail">
-                    Verify your PAN to unlock 50% discount on all ticket tiers
-                  </span>
-                </div>
-                <a href="#/verify" className="banner-cta">Get Verified →</a>
-              </div>
-            )}
-            {checkState === "error" && (
-              <div className="banner-inner">
-                <span className="x-icon">!</span>
-                <div>
-                  <strong>Check failed</strong>
-                  <span className="banner-detail">{error}</span>
-                </div>
-                <button className="banner-cta" onClick={() => checkAttestation(address)}>Retry</button>
-              </div>
-            )}
-          </div>
-        )}
+				{/* ── Attestation status banner ──────────────────────────────────── */}
+				{address && (
+					<div className={`attest-banner attest-banner--${checkState}`}>
+						{checkState === "checking" && (
+							<div className="banner-inner">
+								<span className="spinner" />
+								<span>Checking your PAN attestation on Paseo…</span>
+							</div>
+						)}
+						{checkState === "verified" && (
+							<div className="banner-inner">
+								<span className="check-icon">✓</span>
+								<div>
+									<strong>Verified PAN Holder</strong>
+									<span className="banner-detail">Attested on-chain</span>
+								</div>
+								<span className="discount-tag">50% OFF</span>
+							</div>
+						)}
+						{checkState === "unverified" && (
+							<div className="banner-inner">
+								<span className="x-icon">✗</span>
+								<div>
+									<strong>No PAN attestation found</strong>
+									<span className="banner-detail">
+										Verify your PAN to unlock 50% discount on all ticket tiers
+									</span>
+								</div>
+								<a href="#/verify" className="banner-cta">
+									Get Verified →
+								</a>
+							</div>
+						)}
+						{checkState === "error" && (
+							<div className="banner-inner">
+								<span className="x-icon">!</span>
+								<div>
+									<strong>Check failed</strong>
+									<span className="banner-detail">{error}</span>
+								</div>
+								<button
+									className="banner-cta"
+									onClick={() => checkAttestation(address)}
+								>
+									Retry
+								</button>
+							</div>
+						)}
+					</div>
+				)}
 
-        {/* ── Tickets ───────────────────────────────────────────────────── */}
-        <section className="tickets-section">
-          <div className="section-label">TICKETS</div>
-          <h2 className="section-title">
-            {isVerified ? "Your Exclusive Pricing" : "Choose Your Pass"}
-          </h2>
-          {!address && (
-            <p className="section-hint">
-              Connect your wallet and verify your PAN to unlock <strong>50% off</strong> every tier.
-            </p>
-          )}
+				{/* ── Tickets ───────────────────────────────────────────────────── */}
+				<section className="tickets-section">
+					<div className="section-label">TICKETS</div>
+					<h2 className="section-title">
+						{isVerified ? "Your Exclusive Pricing" : "Choose Your Pass"}
+					</h2>
+					{!address && (
+						<p className="section-hint">
+							Connect your wallet and verify your PAN to unlock{" "}
+							<strong>50% off</strong> every tier.
+						</p>
+					)}
 
-          <div className="tickets-grid">
-            {TICKETS.map((t) => (
-              <div
-                key={t.tier}
-                className={`ticket-card ${t.tier === "Builder" ? "ticket-card--featured" : ""} ${selectedTier === t.tier ? "ticket-card--selected" : ""}`}
-                onClick={() => setSelectedTier(t.tier)}
-              >
-                {t.tier === "Builder" && <div className="featured-badge">Most Popular</div>}
-                <div className="ticket-tier">{t.tier}</div>
+					<div className="tickets-grid">
+						{TICKETS.map((t) => (
+							<div
+								key={t.tier}
+								className={`ticket-card ${t.tier === "Builder" ? "ticket-card--featured" : ""} ${selectedTier === t.tier ? "ticket-card--selected" : ""}`}
+								onClick={() => setSelectedTier(t.tier)}
+							>
+								{t.tier === "Builder" && (
+									<div className="featured-badge">Most Popular</div>
+								)}
+								<div className="ticket-tier">{t.tier}</div>
 
-                <div className="ticket-price-wrap">
-                  {isVerified && (
-                    <span className="price-original">₹{t.original.toLocaleString("en-IN")}</span>
-                  )}
-                  <span className="price-current">
-                    ₹{(isVerified ? t.discounted : t.original).toLocaleString("en-IN")}
-                  </span>
-                  {isVerified && <span className="price-save">Save ₹{(t.original - t.discounted).toLocaleString("en-IN")}</span>}
-                </div>
+								<div className="ticket-price-wrap">
+									{isVerified && (
+										<span className="price-original">
+											₹{t.original.toLocaleString("en-IN")}
+										</span>
+									)}
+									<span className="price-current">
+										₹
+										{(isVerified ? t.discounted : t.original).toLocaleString(
+											"en-IN",
+										)}
+									</span>
+									{isVerified && (
+										<span className="price-save">
+											Save ₹
+											{(t.original - t.discounted).toLocaleString("en-IN")}
+										</span>
+									)}
+								</div>
 
-                <ul className="perk-list">
-                  {t.perks.map((p) => (
-                    <li key={p}>
-                      <span className="perk-check">✓</span> {p}
-                    </li>
-                  ))}
-                </ul>
+								<ul className="perk-list">
+									{t.perks.map((p) => (
+										<li key={p}>
+											<span className="perk-check">✓</span> {p}
+										</li>
+									))}
+								</ul>
 
-                {!address ? (
-                  <button className="ticket-btn" onClick={() => setShowModal(true)}>
-                    Connect to Buy
-                  </button>
-                ) : isVerified ? (
-                  <button className="ticket-btn ticket-btn--primary">
-                    Buy at ₹{t.discounted.toLocaleString("en-IN")} →
-                  </button>
-                ) : (
-                  <button className="ticket-btn ticket-btn--muted">
-                    <a href="#/generate" style={{ color: "inherit", textDecoration: "none" }}>
-                      Verify PAN for 50% off
-                    </a>
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
+								{!address ? (
+									<button
+										className="ticket-btn"
+										onClick={() => setShowModal(true)}
+									>
+										Connect to Buy
+									</button>
+								) : isVerified ? (
+									<button className="ticket-btn ticket-btn--primary">
+										Buy at ₹{t.discounted.toLocaleString("en-IN")} →
+									</button>
+								) : (
+									<button className="ticket-btn ticket-btn--muted">
+										<a
+											href="#/generate"
+											style={{ color: "inherit", textDecoration: "none" }}
+										>
+											Verify PAN for 50% off
+										</a>
+									</button>
+								)}
+							</div>
+						))}
+					</div>
+				</section>
 
-        {/* ── How it works ──────────────────────────────────────────────── */}
-        {!isVerified && (
-          <section className="how-section">
-            <div className="section-label">HOW IT WORKS</div>
-            <h2 className="section-title">Verify once. Save everywhere.</h2>
-            <div className="how-grid">
-              {[
-                { n: "01", title: "Generate ZK Proof", body: "Upload your DigiLocker PAN XML. A zero-knowledge proof is generated entirely in your browser — your data never leaves your device.", href: "#/generate", cta: "Generate →" },
-                { n: "02", title: "Submit On-Chain", body: "The proof is verified by a smart contract on Paseo Asset Hub. Your PAN ownership is attested without revealing any personal details.", href: null, cta: null },
-                { n: "03", title: "Claim Your Discount", body: "Return here with the same wallet. We check your on-chain attestation and apply 50% off instantly — no codes, no friction.", href: null, cta: null },
-              ].map(({ n, title, body, href, cta }) => (
-                <div key={n} className="how-card">
-                  <span className="how-num">{n}</span>
-                  <h3 className="how-title">{title}</h3>
-                  <p className="how-body">{body}</p>
-                  {href && cta && <a href={href} className="how-link">{cta}</a>}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+				{/* ── How it works ──────────────────────────────────────────────── */}
+				{!isVerified && (
+					<section className="how-section">
+						<div className="section-label">HOW IT WORKS</div>
+						<h2 className="section-title">Verify once. Save everywhere.</h2>
+						<div className="how-grid">
+							{[
+								{
+									n: "01",
+									title: "Generate ZK Proof",
+									body: "Upload your DigiLocker PAN XML. A zero-knowledge proof is generated entirely in your browser — your data never leaves your device.",
+									href: "#/generate",
+									cta: "Generate →",
+								},
+								{
+									n: "02",
+									title: "Submit On-Chain",
+									body: "The proof is verified by a smart contract on Paseo Asset Hub. Your PAN ownership is attested without revealing any personal details.",
+									href: null,
+									cta: null,
+								},
+								{
+									n: "03",
+									title: "Claim Your Discount",
+									body: "Return here with the same wallet. We check your on-chain attestation and apply 50% off instantly — no codes, no friction.",
+									href: null,
+									cta: null,
+								},
+							].map(({ n, title, body, href, cta }) => (
+								<div key={n} className="how-card">
+									<span className="how-num">{n}</span>
+									<h3 className="how-title">{title}</h3>
+									<p className="how-body">{body}</p>
+									{href && cta && (
+										<a href={href} className="how-link">
+											{cta}
+										</a>
+									)}
+								</div>
+							))}
+						</div>
+					</section>
+				)}
 
-        {/* ── Speakers strip ────────────────────────────────────────────── */}
-        <section className="speakers-section">
-          <div className="section-label">SPEAKERS</div>
-          <div className="speakers-scroll">
-            {["Gavin Wood", "Shawn Tabrizi", "Maciej Kris Żyszkiewicz", "Kian Paimani", "Francisco Aguirre​", "Radhakrishna Dasari"].map((s) => (
-              <div key={s} className="speaker-chip">
-                <span className="speaker-avatar">{s[0]}</span>
-                <span>{s}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+				{/* ── Speakers strip ────────────────────────────────────────────── */}
+				<section className="speakers-section">
+					<div className="section-label">SPEAKERS</div>
+					<div className="speakers-scroll">
+						{[
+							"Gavin Wood",
+							"Shawn Tabrizi",
+							"Maciej Kris Żyszkiewicz",
+							"Kian Paimani",
+							"Francisco Aguirre​",
+							"Radhakrishna Dasari",
+						].map((s) => (
+							<div key={s} className="speaker-chip">
+								<span className="speaker-avatar">{s[0]}</span>
+								<span>{s}</span>
+							</div>
+						))}
+					</div>
+				</section>
 
-        {/* ── Footer ────────────────────────────────────────────────────── */}
-        <footer className="event-footer">
-          <div className="footer-brand">
-            <span className="nav-dot" />
-            <span>Polkadot India Summit 2026</span>
-          </div>
-          <p className="footer-note">
-            Discounts verified via ZK PAN attestation on Paseo Asset Hub ·{" "}
-            <a href="/verify">Check attestation →</a>
-          </p>
-        </footer>
-      </div>
-    </>
-  );
+				{/* ── Footer ────────────────────────────────────────────────────── */}
+				<footer className="event-footer">
+					<div className="footer-brand">
+						<span className="nav-dot" />
+						<span>Polkadot India Summit 2026</span>
+					</div>
+					<p className="footer-note">
+						Discounts verified via ZK PAN attestation on Paseo Asset Hub ·{" "}
+						<a href="/verify">Check attestation →</a>
+					</p>
+				</footer>
+			</div>
+		</>
+	);
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
