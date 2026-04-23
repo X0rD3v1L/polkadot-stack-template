@@ -1,22 +1,24 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useChainStore } from "./store/chainStore";
-import { useConnectionManagement } from "./hooks/useConnection";
+// import { useChainStore } from "./store/chainStore";
+// import { useConnectionManagement } from "./hooks/useConnection";
 
 export default function App() {
 	const location = useLocation();
-	const pallets = useChainStore((s) => s.pallets);
-	const connected = useChainStore((s) => s.connected);
+	// const pallets = useChainStore((s) => s.pallets);
+	// const connected = useChainStore((s) => s.connected);
 
-	useConnectionManagement();
+	// useConnectionManagement();
 
 	const navItems = [
 		{ path: "/", label: "Home", enabled: true },
-		{ path: "/pallet", label: "Pallet PoE", enabled: pallets.templatePallet === true },
-		{ path: "/evm", label: "EVM PoE", enabled: pallets.revive === true },
-		{ path: "/pvm", label: "PVM PoE", enabled: pallets.revive === true },
-		{ path: "/statements", label: "Statements", enabled: true },
-		{ path: "/accounts", label: "Accounts", enabled: true },
-		{ path: "/event", label: "India Event", enabled: true}
+		// { path: "/pallet", label: "Pallet PoE", enabled: pallets.templatePallet === true },
+		// { path: "/evm", label: "EVM PoE", enabled: pallets.revive === true },
+		// { path: "/pvm", label: "PVM PoE", enabled: pallets.revive === true },
+		// { path: "/statements", label: "Statements", enabled: true },
+		// { path: "/accounts", label: "Accounts", enabled: true },
+		{ path: "/generate", label: "Generate Proof", enabled: true },
+		{ path: "/verify", label: "Verify Proof", enabled: true },
+		{ path: "/event", label: "India Summit", enabled: true },
 	];
 
 	return (
@@ -55,11 +57,10 @@ export default function App() {
 								<Link
 									key={item.path}
 									to={item.path}
-									className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-										location.pathname === item.path
+									className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${location.pathname === item.path
 											? "text-white"
 											: "text-text-secondary hover:text-text-primary hover:bg-white/[0.04]"
-									}`}
+										}`}
 								>
 									{location.pathname === item.path && (
 										<span className="absolute inset-0 rounded-lg bg-polka-500/15 border border-polka-500/25" />
@@ -76,20 +77,6 @@ export default function App() {
 								</span>
 							),
 						)}
-					</div>
-
-					{/* Connection indicator */}
-					<div className="ml-auto flex items-center gap-2 shrink-0">
-						<span
-							className={`w-2 h-2 rounded-full transition-colors duration-500 ${
-								connected
-									? "bg-accent-green shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-									: "bg-text-muted"
-							}`}
-						/>
-						<span className="text-xs text-text-tertiary hidden sm:inline">
-							{connected ? "Connected" : "Offline"}
-						</span>
 					</div>
 				</div>
 			</nav>

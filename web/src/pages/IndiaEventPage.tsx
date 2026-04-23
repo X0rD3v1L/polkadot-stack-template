@@ -11,7 +11,7 @@ const SCHEMA = "0x1f70926f006bbe27dee4902c852a268b648b358bebc8eeb42e524004752ead
 const paseoAssetHub = {
   id: 420420417,
   name: "Polkadot Hub TestNet",
-  nativeCurrency: { name: "Unit", symbol: "UNIT", decimals: 18 },
+  nativeCurrency: { name: "PAS", symbol: "PAS", decimals: 18 },
   rpcUrls: { default: { http: [PASEO_RPC] } },
 } as const;
 
@@ -75,11 +75,11 @@ const PAN_ATTESTER_ABI = [
 
 type CheckState = "idle" | "checking" | "verified" | "unverified" | "error";
 
-interface AttestationRecord {
-  issuedAt: number;
-  expiry: number;
-  nullifier: bigint;
-}
+// interface AttestationRecord {
+//   issuedAt: number;
+//   expiry: number;
+//   nullifier: bigint;
+// }
 
 interface Ticket {
   tier: string;
@@ -171,7 +171,7 @@ function detectWallets(): DetectedWallet[] {
 export default function IndiaEventPage() {
   const [address, setAddress] = useState<string | null>(null);
   const [checkState, setCheckState] = useState<CheckState>("idle");
-  const [record, setRecord] = useState<AttestationRecord | null>(null);
+  // const [record, setRecord] = useState<AttestationRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
@@ -228,25 +228,26 @@ export default function IndiaEventPage() {
       ]);
 
       if (hasValid && isValid) {
-        const [rec, nullifier] = await Promise.all([
-          client.readContract({
-            address: ATTESTATION_REGISTRY,
-            abi: REGISTRY_ABI,
-            functionName: "get",
-            args: [addr as `0x${string}`, SCHEMA, PAN_ATTESTER],
-          }),
-          client.readContract({
-            address: PAN_ATTESTER,
-            abi: PAN_ATTESTER_ABI,
-            functionName: "getNullifierByAddress",
-            args: [addr as `0x${string}`],
-          }),
-        ]);
-        setRecord({
-          issuedAt: Number((rec as any).issuedAt),
-          expiry: Number((rec as any).expiry),
-          nullifier: nullifier as bigint,
-        });
+        // const [rec, nullifier] = await Promise.all([
+        //   client.readContract({
+        //     address: ATTESTATION_REGISTRY,
+        //     abi: REGISTRY_ABI,
+        //     functionName: "get",
+        //     args: [addr as `0x${string}`, SCHEMA, PAN_ATTESTER],
+        //   }),
+        //   client.readContract({
+        //     address: PAN_ATTESTER,
+        //     abi: PAN_ATTESTER_ABI,
+        //     functionName: "getNullifierByAddress",
+        //     args: [addr as `0x${string}`],
+        //   }),
+        // ]);
+        // console.log(Number((rec as any).issuedAt));
+        // setRecord({
+        //   issuedAt: Number((rec as any).issuedAt),
+        //   expiry: Number((rec as any).expiry),
+        //   nullifier: nullifier as bigint,
+        // });
         setCheckState("verified");
       } else {
         setCheckState("unverified");
@@ -282,7 +283,7 @@ export default function IndiaEventPage() {
   const disconnect = () => {
     setAddress(null);
     setCheckState("idle");
-    setRecord(null);
+    // setRecord(null);
     setError(null);
   };
 
@@ -418,7 +419,7 @@ export default function IndiaEventPage() {
                     Verify your PAN to unlock 50% discount on all ticket tiers
                   </span>
                 </div>
-                <a href="/generate" className="banner-cta">Get Verified →</a>
+                <a href="#/verify" className="banner-cta">Get Verified →</a>
               </div>
             )}
             {checkState === "error" && (
@@ -484,7 +485,7 @@ export default function IndiaEventPage() {
                   </button>
                 ) : (
                   <button className="ticket-btn ticket-btn--muted">
-                    <a href="/generate" style={{ color: "inherit", textDecoration: "none" }}>
+                    <a href="#/generate" style={{ color: "inherit", textDecoration: "none" }}>
                       Verify PAN for 50% off
                     </a>
                   </button>
@@ -501,7 +502,7 @@ export default function IndiaEventPage() {
             <h2 className="section-title">Verify once. Save everywhere.</h2>
             <div className="how-grid">
               {[
-                { n: "01", title: "Generate ZK Proof", body: "Upload your DigiLocker PAN XML. A zero-knowledge proof is generated entirely in your browser — your data never leaves your device.", href: "/generate", cta: "Generate →" },
+                { n: "01", title: "Generate ZK Proof", body: "Upload your DigiLocker PAN XML. A zero-knowledge proof is generated entirely in your browser — your data never leaves your device.", href: "#/generate", cta: "Generate →" },
                 { n: "02", title: "Submit On-Chain", body: "The proof is verified by a smart contract on Paseo Asset Hub. Your PAN ownership is attested without revealing any personal details.", href: null, cta: null },
                 { n: "03", title: "Claim Your Discount", body: "Return here with the same wallet. We check your on-chain attestation and apply 50% off instantly — no codes, no friction.", href: null, cta: null },
               ].map(({ n, title, body, href, cta }) => (
@@ -533,7 +534,7 @@ export default function IndiaEventPage() {
         <footer className="event-footer">
           <div className="footer-brand">
             <span className="nav-dot" />
-            <span>Polkadot India Summit 2025</span>
+            <span>Polkadot India Summit 2026</span>
           </div>
           <p className="footer-note">
             Discounts verified via ZK PAN attestation on Paseo Asset Hub ·{" "}
