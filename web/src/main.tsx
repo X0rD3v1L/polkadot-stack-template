@@ -10,6 +10,7 @@ const EvmContractPage = lazy(() => import("./pages/EvmContractPage"));
 const PvmContractPage = lazy(() => import("./pages/PvmContractPage"));
 const AccountsPage = lazy(() => import("./pages/AccountsPage"));
 const StatementStorePage = lazy(() => import("./pages/StatementStorePage"));
+const IndiaEventPage = lazy(() => import("./pages/IndiaEventPage"));
 
 const routeFallback = (
 	<div className="card animate-pulse">
@@ -68,6 +69,14 @@ createRoot(document.getElementById("root")!).render(
 						element={
 							<Suspense fallback={routeFallback}>
 								<StatementStorePage />
+							</Suspense>
+						}
+					/>
+					<Route
+						path="event"
+						element={
+							<Suspense fallback={routeFallback}>
+								<IndiaEventPage />
 							</Suspense>
 						}
 					/>
