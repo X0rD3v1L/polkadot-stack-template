@@ -1,24 +1,3 @@
-/**
- * GenerateProofPage.tsx
- *
- * Drop into: web/src/pages/GenerateProofPage.tsx
- *
- * Add to App.tsx routes:
- *   import GenerateProofPage from './pages/GenerateProofPage';
- *   <Route path="/generate" element={<GenerateProofPage />} />
- *
- * Install deps (if not already in web/):
- *   npm install snarkjs xmldsigjs vite-plugin-node-polyfills
- *
- * Add to vite.config.ts:
- *   import { nodePolyfills } from 'vite-plugin-node-polyfills';
- *   plugins: [react(), nodePolyfills({ globals: { Buffer: true, global: true, process: true } })],
- *   optimizeDeps: { exclude: ['snarkjs'], include: ['xmldsigjs'] }
- *
- * No wallet connection required — proof generation is fully local.
- * The "Claim Event Discount" button links to /event after download.
- */
-
 import { useState, useRef, useCallback } from "react";
 import { Application, Parse, SignedXml } from "xmldsigjs";
 import { encodeAbiParameters, keccak256 } from "viem";

@@ -1,18 +1,3 @@
-/**
- * ZKPanHomePage.tsx
- *
- * Drop into: web/src/pages/ZKPanHomePage.tsx
- *
- * Add to main.tsx routes (replace or add alongside existing index route):
- *   import ZKPanHomePage from './pages/ZKPanHomePage';
- *   <Route index element={<Suspense fallback={routeFallback}><ZKPanHomePage /></Suspense>} />
- *
- * Or add as a separate route if you want to keep the template's HomePage:
- *   <Route path="zkpan" element={<Suspense fallback={routeFallback}><ZKPanHomePage /></Suspense>} />
- *
- * Zero dependencies beyond React.
- */
-
 export default function ZKPanHomePage() {
   return (
     <>
