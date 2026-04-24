@@ -585,7 +585,7 @@ export default function VerifyProofPage() {
 									{ label: "Network", value: "Paseo Asset Hub" },
 									{
 										label: "RPC",
-										value: RPC_URL,
+										value: RPC_URL, 
 									},
 								].map(({ label, value }) => (
 									<div key={label} className="vfy-contract-row">
